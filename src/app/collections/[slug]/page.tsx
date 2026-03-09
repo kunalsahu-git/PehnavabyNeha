@@ -16,7 +16,6 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 
 const ITEMS_PER_PAGE = 8;
@@ -128,11 +127,16 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] sm:w-[400px]">
                 <SheetHeader className="pb-6 border-b">
-                  <SheetTitle className="text-lg font-headline uppercase tracking-widest">Filters</SheetTitle>
+                  <SheetTitle className="text-lg font-headline uppercase tracking-widest text-primary">Filters</SheetTitle>
                 </SheetHeader>
-                <div className="py-8 space-y-8">
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider">Price Range</h3>
+                <div className="py-8 space-y-10">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider">Price Range</h3>
+                      <span className="text-[10px] font-bold text-primary px-2 py-1 bg-primary/5 rounded">
+                        ₹{priceRange[0]} - ₹{priceRange[1]}
+                      </span>
+                    </div>
                     <div className="px-2">
                       <Slider
                         defaultValue={[0, 15000]}
@@ -143,31 +147,33 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                         className="py-4"
                       />
                       <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mt-2">
-                        <span>₹{priceRange[0]}</span>
-                        <span>₹{priceRange[1]}+</span>
+                        <span>₹0</span>
+                        <span>₹15000+</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider">Availability</h3>
-                    <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" className="rounded border-border" defaultChecked />
+                    <div className="flex flex-col gap-3">
+                      <label className="flex items-center gap-3 text-sm cursor-pointer hover:text-primary transition-colors group">
+                        <div className="h-4 w-4 rounded border border-primary flex items-center justify-center group-hover:bg-primary/5">
+                           <div className="h-2 w-2 bg-primary rounded-sm" />
+                        </div>
                         <span>In Stock</span>
                       </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer opacity-50">
-                        <input type="checkbox" className="rounded border-border" disabled />
+                      <label className="flex items-center gap-3 text-sm cursor-not-allowed opacity-40">
+                        <div className="h-4 w-4 rounded border border-muted" />
                         <span>Out of Stock</span>
                       </label>
                     </div>
                   </div>
                 </div>
-                <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-2">
-                   <Button className="w-full rounded-full font-bold uppercase text-[10px] tracking-widest">Apply Filters</Button>
+                <div className="absolute bottom-8 left-6 right-6 flex flex-col gap-3">
+                   <Button className="w-full rounded-full h-12 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg">Apply Filters</Button>
                    <Button 
-                    variant="outline" 
-                    className="w-full rounded-full font-bold uppercase text-[10px] tracking-widest"
+                    variant="ghost" 
+                    className="w-full rounded-full font-bold uppercase text-[10px] tracking-[0.2em] text-muted-foreground hover:text-primary"
                     onClick={() => setPriceRange([0, 15000])}
                    >
                      Reset All
@@ -181,16 +187,16 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px] h-9 text-[10px] font-bold uppercase tracking-wider border-none bg-secondary/60 rounded-full focus:ring-0">
                 <div className="flex items-center gap-2">
-                  <span className="opacity-50">SORT:</span>
+                  <span className="opacity-50">SORT BY:</span>
                   <SelectValue />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="featured">Featured</SelectItem>
                 <SelectItem value="best-selling">Best Selling</SelectItem>
-                <SelectItem value="price-low">Price: Low-High</SelectItem>
-                <SelectItem value="price-high">Price: High-Low</SelectItem>
-                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="newest">Newest Arrivals</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -201,14 +207,14 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
       <section className="container mx-auto px-4 py-12">
         {paginatedProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <p className="text-muted-foreground font-medium text-sm">No products match your criteria.</p>
+            <p className="text-muted-foreground font-medium text-sm">No products found for this price range.</p>
             <Button onClick={() => setPriceRange([0, 15000])} variant="link" className="text-primary font-bold uppercase text-xs tracking-widest">
               Clear All Filters
             </Button>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-x-10 md:gap-y-16">
               {paginatedProducts.map((product) => (
                 <ProductCard key={product.id} {...product} />
               ))}
@@ -216,11 +222,11 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-2 mt-16">
+              <div className="flex items-center justify-center space-x-2 mt-20">
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="rounded-full h-10 w-10"
+                  className="rounded-full h-10 w-10 border-primary/20"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
@@ -231,7 +237,10 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                   <Button
                     key={i}
                     variant={currentPage === i + 1 ? "default" : "outline"}
-                    className={cn("h-10 w-10 rounded-full font-bold", currentPage === i + 1 ? "shadow-md" : "")}
+                    className={cn(
+                      "h-10 w-10 rounded-full font-bold transition-all", 
+                      currentPage === i + 1 ? "shadow-md scale-110" : "border-primary/10 text-muted-foreground hover:border-primary/40"
+                    )}
                     onClick={() => setCurrentPage(i + 1)}
                   >
                     {i + 1}
@@ -241,7 +250,7 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="rounded-full h-10 w-10"
+                  className="rounded-full h-10 w-10 border-primary/20"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
@@ -255,36 +264,37 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
 
       {/* SEO/Text Content Section */}
       {category.longDescription && (
-        <section className="container mx-auto px-4 py-16 border-t border-b bg-secondary/10 mt-12 rounded-2xl">
+        <section className="container mx-auto px-4 py-20 border-t border-b bg-secondary/10 mt-20 rounded-3xl">
           <div className="max-w-4xl mx-auto">
-            <div className="flex flex-col items-center text-center mb-10 space-y-3">
-               <nav className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
+            <div className="flex flex-col items-center text-center mb-12 space-y-4">
+               <nav className="flex items-center space-x-2 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground mb-2">
                 <Link href="/">Home</Link>
                 <span>/</span>
                 <Link href="/collections/all">Shop</Link>
                 <span>/</span>
                 <span className="text-primary">{category.name}</span>
               </nav>
-              <h2 className="text-3xl md:text-4xl font-headline font-bold uppercase tracking-widest">{category.name}</h2>
+              <h2 className="text-4xl md:text-5xl font-headline font-bold uppercase tracking-wider">{category.name}</h2>
+              <div className="h-1 w-24 bg-accent/40 rounded-full" />
             </div>
             
             <div 
-              className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground leading-relaxed space-y-4 text-sm md:text-base text-center md:text-left"
+              className="prose prose-neutral dark:prose-invert max-w-none text-muted-foreground leading-relaxed space-y-6 text-sm md:text-base"
               dangerouslySetInnerHTML={{ __html: category.longDescription }} 
             />
             
-            <div className="mt-16 pt-8 border-t">
-              <h3 className="text-xs font-bold mb-6 uppercase tracking-[0.2em] text-primary text-center">Popular Searches</h3>
-              <div className="flex flex-wrap justify-center gap-y-3 gap-x-4 text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                <Link href="/" className="hover:text-primary transition-colors">Women Ethnic Wear</Link>
-                <span className="opacity-20">|</span>
-                <Link href="/collections/ethnic-wear" className="hover:text-primary transition-colors">Designer Ethnic Sets</Link>
-                <span className="opacity-20">|</span>
-                <Link href="/collections/sarees" className="hover:text-primary transition-colors">Silk Sarees</Link>
-                <span className="opacity-20">|</span>
-                <Link href="/collections/western-fusion" className="hover:text-primary transition-colors">Fusion Gowns</Link>
-                <span className="opacity-20">|</span>
-                <Link href="/collections/accessories" className="hover:text-primary transition-colors">Jewellery Collection</Link>
+            <div className="mt-20 pt-10 border-t border-primary/10">
+              <h3 className="text-xs font-bold mb-8 uppercase tracking-[0.4em] text-primary text-center">Popular Searches</h3>
+              <div className="flex flex-wrap justify-center items-center gap-y-4 gap-x-6 text-[11px] uppercase tracking-widest text-muted-foreground/80 font-bold">
+                <Link href="/" className="hover:text-primary transition-all hover:-translate-y-0.5">Women Ethnic Wear</Link>
+                <div className="h-1 w-1 bg-accent rounded-full opacity-30" />
+                <Link href="/collections/ethnic-wear" className="hover:text-primary transition-all hover:-translate-y-0.5">Designer Ethnic Sets</Link>
+                <div className="h-1 w-1 bg-accent rounded-full opacity-30" />
+                <Link href="/collections/sarees" className="hover:text-primary transition-all hover:-translate-y-0.5">Silk Sarees</Link>
+                <div className="h-1 w-1 bg-accent rounded-full opacity-30" />
+                <Link href="/collections/western-fusion" className="hover:text-primary transition-all hover:-translate-y-0.5">Fusion Gowns</Link>
+                <div className="h-1 w-1 bg-accent rounded-full opacity-30" />
+                <Link href="/collections/accessories" className="hover:text-primary transition-all hover:-translate-y-0.5">Jewellery Collection</Link>
               </div>
             </div>
           </div>
@@ -292,12 +302,12 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
       )}
 
       {/* Cross-Sell */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4">
-          <h3 className="text-sm font-bold text-center mb-10 uppercase tracking-[0.3em] text-muted-foreground">Other Collections</h3>
-          <div className="flex flex-wrap justify-center gap-4">
+          <h3 className="text-xs font-bold text-center mb-12 uppercase tracking-[0.5em] text-muted-foreground/60">Explore Other Collections</h3>
+          <div className="flex flex-wrap justify-center gap-6">
             {CATEGORIES.filter(c => c.slug !== slug).map((c) => (
-              <Button key={c.slug} asChild variant="outline" className="rounded-full border-primary/20 hover:border-primary hover:bg-primary/5 text-primary h-12 px-8 font-bold text-[10px] uppercase tracking-widest transition-all">
+              <Button key={c.slug} asChild variant="outline" className="rounded-full border-primary/10 hover:border-primary hover:bg-primary/5 text-primary h-14 px-10 font-bold text-[11px] uppercase tracking-[0.2em] transition-all shadow-sm hover:shadow-md">
                 <Link href={`/collections/${c.slug}`}>{c.name}</Link>
               </Button>
             ))}
