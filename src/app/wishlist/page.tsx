@@ -35,7 +35,7 @@ export default function WishlistPage() {
 
       <section className="container mx-auto px-4 py-16">
         {itemCount === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-8 text-center max-w-lg mx-auto">
+          <div className="flex flex-col items-center justify-center py-20 space-y-8 text-center max-w-5xl mx-auto">
             <div className="relative">
               <div className="h-24 w-24 bg-secondary rounded-full flex items-center justify-center animate-pulse">
                 <Heart className="h-10 w-10 text-muted-foreground/40" />
@@ -45,7 +45,7 @@ export default function WishlistPage() {
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-3 max-w-lg">
               <h2 className="text-2xl font-headline font-bold uppercase tracking-tight">Your wishlist is empty</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Save your favorite pieces from "Pehnava by Neha" to keep track of what you love. 
@@ -81,11 +81,11 @@ export default function WishlistPage() {
                   <h2 className="text-2xl font-headline font-bold uppercase">Ready to Checkout?</h2>
                   <p className="text-muted-foreground text-sm">Move your favorites to your bag and start your story.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button asChild variant="outline" className="rounded-full px-8 h-12 font-bold uppercase text-[10px] tracking-widest border-primary text-primary">
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                  <Button asChild variant="outline" className="rounded-full px-8 h-12 font-bold uppercase text-[10px] tracking-widest border-primary text-primary w-full sm:w-auto">
                     <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Home</Link>
                   </Button>
-                  <Button asChild className="rounded-full px-8 h-12 font-bold uppercase text-[10px] tracking-widest shadow-lg">
+                  <Button asChild className="rounded-full px-8 h-12 font-bold uppercase text-[10px] tracking-widest shadow-lg w-full sm:w-auto">
                     <Link href="/checkout">Go to Cart <ShoppingBag className="ml-2 h-4 w-4" /></Link>
                   </Button>
                 </div>
@@ -99,7 +99,7 @@ export default function WishlistPage() {
       <section className="container mx-auto px-4 py-20 mt-20 text-center">
         <div className="max-w-2xl mx-auto space-y-6">
           <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-accent">Curated with Heart</span>
-          <p className="font-headline text-3xl italic text-muted-foreground leading-relaxed">
+          <p className="font-headline text-2xl md:text-3xl italic text-muted-foreground leading-relaxed">
             "Clothing is not just fabric; it's a celebration of your heritage and your future. We are honored to be part of your story."
           </p>
           <p className="text-xs font-bold uppercase tracking-widest text-primary">— Neha</p>
