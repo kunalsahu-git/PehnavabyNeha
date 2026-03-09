@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -11,9 +10,13 @@ import {
   Edit2, 
   Trash2, 
   Eye, 
-  CheckCircle2, 
-  XCircle,
-  Package
+  Package,
+  Sparkles,
+  Loader2,
+  X,
+  Upload,
+  ChevronRight,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,25 +38,77 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle,
+  SheetDescription,
+  SheetFooter
+} from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ALL_PRODUCTS } from '@/lib/store-data';
+import { generateProductDescription } from '@/ai/flows/generate-product-description';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProductsAdminPage() {
   const [searchTerm, setSearchQuery] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
+
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'Ethnic Sets',
+    price: '',
+    fabric: 'Silk',
+    description: '',
+    features: ['Hand-blocked', 'Golden Motifs']
+  });
 
   const filteredProducts = ALL_PRODUCTS.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleGenerateAI = async () => {
+    if (!formData.name) {
+      toast({ title: "Name required", description: "Please enter a product name first.", variant: "destructive" });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const result = await generateProductDescription({
+        productName: formData.name,
+        category: formData.category,
+        fabric: formData.fabric,
+        features: formData.features,
+        tone: 'luxurious, editorial, heritage'
+      });
+      setFormData({ ...formData, description: result.description });
+      toast({ title: "AI Magic Ready!", description: "High-end product description generated." });
+    } catch (e) {
+      toast({ title: "AI Error", description: "Could not connect to the studio scribe.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveProduct = () => {
+    toast({ title: "Product Created", description: `${formData.name} added to catalog.` });
+    setIsAdding(false);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-headline font-bold uppercase tracking-wider">Product Catalog</h1>
+          <h1 className="text-4xl font-headline font-bold uppercase tracking-wider text-primary">Product Catalog</h1>
           <p className="text-sm text-muted-foreground">Manage your boutique inventory, pricing, and visibility.</p>
         </div>
-        <Button className="rounded-full font-bold uppercase text-[10px] tracking-widest h-12 px-8 shadow-xl shadow-primary/20">
+        <Button onClick={() => setIsAdding(true)} className="rounded-full font-bold uppercase text-[10px] tracking-widest h-12 px-8 shadow-xl shadow-primary/20">
           <Plus className="h-4 w-4 mr-2" /> Add New Product
         </Button>
       </div>
@@ -179,6 +234,124 @@ export default function ProductsAdminPage() {
           </TableBody>
         </Table>
       </Card>
+
+      {/* Add Product Sheet */}
+      <Sheet open={isAdding} onOpenChange={setIsAdding}>
+        <SheetContent className="sm:max-w-2xl overflow-y-auto no-scrollbar">
+          <SheetHeader className="pb-6 border-b">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
+              <Plus className="h-3 w-3" /> Boutique Catalog
+            </div>
+            <SheetTitle className="text-3xl font-headline font-bold uppercase">Add New Piece</SheetTitle>
+            <SheetDescription className="text-xs">Curate your collection with luxury South Asian fashion.</SheetDescription>
+          </SheetHeader>
+
+          <div className="py-8 space-y-8">
+            {/* Basic Info */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2 col-span-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product Name</Label>
+                <Input 
+                  placeholder="e.g. Ivory Hand-painted Anarkali" 
+                  className="h-12 rounded-xl"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Category</Label>
+                <select 
+                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                >
+                  <option>Ethnic Sets</option>
+                  <option>Sarees</option>
+                  <option>Western & Fusion</option>
+                  <option>Accessories</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Base Price (₹)</Label>
+                <Input 
+                  type="number" 
+                  placeholder="2999" 
+                  className="h-12 rounded-xl"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Media Upload Mock */}
+            <div className="space-y-4">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product Images</Label>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 hover:border-primary/40 cursor-pointer bg-slate-50 transition-colors">
+                  <Upload className="h-5 w-5 text-slate-400" />
+                  <span className="text-[8px] font-bold uppercase">Main</span>
+                </div>
+                <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 opacity-50">
+                  <Plus className="h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* AI Description Generator */}
+            <div className="space-y-4 bg-primary/5 p-6 rounded-2xl border border-primary/10">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Sparkles className="h-3 w-3" /> Boutique AI Scribe
+                </Label>
+                <Button 
+                  onClick={handleGenerateAI} 
+                  disabled={isGenerating}
+                  variant="ghost" 
+                  className="h-8 px-4 rounded-full text-[9px] font-bold uppercase tracking-widest bg-white shadow-sm border border-primary/10 hover:bg-primary hover:text-white"
+                >
+                  {isGenerating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                  Generate Luxe Description
+                </Button>
+              </div>
+              <Textarea 
+                placeholder="Product description that captures the heritage and femininity..." 
+                className="min-h-[120px] rounded-xl bg-white focus:ring-primary border-none text-xs leading-relaxed"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+              <p className="text-[8px] text-muted-foreground font-medium italic">Powered by Genkit • Tailored for Pehnava by Neha brand voice.</p>
+            </div>
+
+            {/* Additional Details */}
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Primary Fabric</Label>
+                <Input 
+                  placeholder="e.g. Mulberry Silk" 
+                  className="h-12 rounded-xl"
+                  value={formData.fabric}
+                  onChange={(e) => setFormData({...formData, fabric: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stock Status</Label>
+                <select className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option>In Stock</option>
+                  <option>Low Stock</option>
+                  <option>Out of Stock</option>
+                  <option>Pre-order</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <SheetFooter className="pt-6 border-t mt-auto">
+            <Button onClick={handleSaveProduct} className="w-full h-14 rounded-full font-bold uppercase text-[10px] tracking-[0.2em] shadow-xl">
+              Publish to Boutique
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
