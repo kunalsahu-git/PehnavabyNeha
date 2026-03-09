@@ -108,7 +108,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     className={cn(
-                      "relative flex-shrink-0 w-20 aspect-[4/5] rounded-md overflow-hidden border-2 transition-all",
+                      "relative flex-shrink-0 w-20 aspect-square rounded-md overflow-hidden border-2 transition-all",
                       activeImageIndex === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
@@ -118,7 +118,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               </div>
               
               {/* Main Image */}
-              <div className="relative flex-1 aspect-[4/5] bg-secondary/20 rounded-xl overflow-hidden shadow-sm group">
+              <div className="relative flex-1 aspect-square bg-secondary/20 rounded-xl overflow-hidden shadow-sm group">
                 <Image
                   src={images[activeImageIndex]}
                   alt={product.name}
