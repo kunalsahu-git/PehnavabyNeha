@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,9 +12,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const NAV_LINKS = [
   { name: "Ethnic Wear", href: "/collections/ethnic-wear" },
+  { name: "Sarees", href: "/collections/sarees" },
   { name: "Western & Fusion", href: "/collections/western-fusion" },
   { name: "Accessories", href: "/collections/accessories" },
-  { name: "Occasion", href: "/collections/occasion" },
   { name: "Sale", href: "/collections/sale", color: "text-primary font-bold" },
 ];
 
@@ -35,6 +36,7 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col gap-6 mt-12">
+                  <Link href="/" className="text-xl font-headline font-bold text-primary">Home</Link>
                   {NAV_LINKS.map((link) => (
                     <Link
                       key={link.name}
@@ -44,6 +46,7 @@ export function Header() {
                       {link.name}
                     </Link>
                   ))}
+                  <Link href="/collections/new-arrivals" className="text-xl font-medium">New Arrivals</Link>
                 </nav>
               </SheetContent>
             </Sheet>
