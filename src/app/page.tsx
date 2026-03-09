@@ -1,17 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Star, Truck, RefreshCw, MessageSquare, ShieldCheck, Heart } from "lucide-react";
+import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const CATEGORIES = [
-  { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', href: "/collections/ethnic-wear" },
-  { name: "Sarees", image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', href: "/collections/sarees" },
-  { name: "Dresses", image: PlaceHolderImages.find(i => i.id === 'cat-western')?.imageUrl || '', href: "/collections/western-fusion" },
-  { name: "Jewellery", image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', href: "/collections/jewellery" },
-  { name: "Sale", image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', href: "/collections/sale" },
+  { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageHint || '', href: "/collections/ethnic-wear" },
+  { name: "Sarees", image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'product-1')?.imageHint || '', href: "/collections/sarees" },
+  { name: "Dresses", image: PlaceHolderImages.find(i => i.id === 'cat-western')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-western')?.imageHint || '', href: "/collections/western-fusion" },
+  { name: "Jewellery", image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageHint || '', href: "/collections/jewellery" },
+  { name: "Sale", image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'product-3')?.imageHint || '', href: "/collections/sale" },
 ];
 
 const NEW_ARRIVALS = [
@@ -21,38 +21,63 @@ const NEW_ARRIVALS = [
   { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true },
 ];
 
+const HERO_SLIDES = [
+  {
+    id: 1,
+    title: 'Elegance Redefined',
+    description: 'Discover curated pieces that celebrate the modern woman\'s heritage.',
+    image: PlaceHolderImages.find(i => i.id === 'hero-1'),
+  },
+  {
+    id: 2,
+    title: 'The Wedding Edit',
+    description: 'Exquisite bridal and occasion wear for your most special moments.',
+    image: PlaceHolderImages.find(i => i.id === 'hero-2'),
+  },
+  {
+    id: 3,
+    title: 'Luxury in Every Stitch',
+    description: 'Timeless designs meet modern craftsmanship in our premium collection.',
+    image: PlaceHolderImages.find(i => i.id === 'hero-3'),
+  },
+];
+
 export default function Home() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Banner Section */}
-      <section className="relative h-[60vh] md:h-[85vh] w-full">
+      <section className="relative h-[70vh] md:h-[90vh] w-full">
         <Carousel opts={{ loop: true }} className="h-full w-full">
           <CarouselContent className="h-full ml-0">
-            {[1, 2, 3].map((index) => (
-              <CarouselItem key={index} className="h-full p-0">
+            {HERO_SLIDES.map((slide) => (
+              <CarouselItem key={slide.id} className="h-full p-0">
                 <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
                   <Image
-                    src={PlaceHolderImages.find(i => i.id === `hero-${index}`)?.imageUrl || ''}
-                    alt={`Pehnava Hero ${index}`}
+                    src={slide.image?.imageUrl || ''}
+                    alt={slide.title}
                     fill
-                    className="object-cover brightness-[0.85]"
-                    priority
+                    className="object-cover brightness-[0.8]"
+                    priority={slide.id === 1}
+                    data-ai-hint={slide.image?.imageHint}
                   />
+                  {/* Gradient Overlay for Text Readability */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+                  
                   <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-6">
-                    <span className="text-sm font-bold tracking-[0.3em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                      New Collection 2024
+                    <span className="text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                      Collection 2024
                     </span>
                     <h1 className="text-5xl md:text-8xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-                      {index === 1 ? 'Elegance Redefined' : index === 2 ? 'The Wedding Edit' : 'Luxury in Every Stitch'}
+                      {slide.title}
                     </h1>
-                    <p className="text-lg md:text-xl font-light max-w-2xl mx-auto opacity-90 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-500">
-                      Discover curated pieces that celebrate the modern woman&apos;s heritage.
+                    <p className="text-lg md:text-2xl font-light max-w-2xl mx-auto opacity-95 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-500">
+                      {slide.description}
                     </p>
-                    <div className="pt-4 flex items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
-                      <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-14 px-10 text-lg rounded-full">
-                        Shop Collection
+                    <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
+                      <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto">
+                        Shop Now
                       </Button>
-                      <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 h-14 px-10 text-lg rounded-full">
+                      <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 h-14 px-10 text-lg rounded-full w-full sm:w-auto">
                         View Lookbook
                       </Button>
                     </div>
@@ -61,8 +86,8 @@ export default function Home() {
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="hidden md:flex left-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/20" />
-          <CarouselNext className="hidden md:flex right-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/20" />
+          <CarouselPrevious className="hidden lg:flex left-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/30 backdrop-blur-sm" />
+          <CarouselNext className="hidden lg:flex right-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/30 backdrop-blur-sm" />
         </Carousel>
       </section>
 
@@ -81,9 +106,10 @@ export default function Home() {
                 alt={cat.name}
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
+                data-ai-hint={cat.hint}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white font-headline text-2xl font-semibold">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white font-headline text-2xl font-semibold whitespace-nowrap">
                 {cat.name}
               </div>
             </Link>
@@ -131,11 +157,12 @@ export default function Home() {
                 alt="Shop the look"
                 fill
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                data-ai-hint={PlaceHolderImages[i + 4].imageHint}
               />
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                 <h3 className="text-3xl font-headline font-bold mb-4">Midnight Soiree</h3>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary rounded-full">
+                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary rounded-full px-8">
                   Shop Outfit
                 </Button>
               </div>
