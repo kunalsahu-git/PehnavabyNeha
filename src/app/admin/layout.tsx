@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Loader2,
   Tag,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -106,6 +107,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </Link>
             );
           })}
+          
+          <Separator className="my-4 bg-white/10" />
+          
+          <Link 
+            href="/"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-accent hover:bg-white/5"
+          >
+            <ExternalLink className="h-5 w-5" />
+            View Website
+          </Link>
         </nav>
 
         <div className="p-6 border-t border-white/5 space-y-4">
@@ -174,6 +185,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {item.name}
                   </Link>
                 ))}
+                <Separator className="bg-white/10 my-4" />
+                <Link 
+                  href="/"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="flex items-center gap-4 p-4 rounded-2xl text-lg font-headline text-accent"
+                >
+                  <ExternalLink className="h-6 w-6" />
+                  View Website
+                </Link>
              </nav>
              <Button 
               onClick={handleLogout}
