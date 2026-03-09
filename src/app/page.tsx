@@ -203,54 +203,6 @@ export default function Home() {
         </Carousel>
       </section>
 
-      {/* Studio Stories Section (Instagram Reel Style) */}
-      <section className="bg-white py-16 md:py-24 border-b overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
-            <div className="text-center md:text-left space-y-2">
-              <div className="flex items-center justify-center md:justify-start gap-3 text-primary">
-                <Instagram className="h-5 w-5" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Follow @PehnavaByNeha</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-headline font-bold uppercase">Studio Stories</h2>
-            </div>
-            <Button variant="outline" className="rounded-full border-primary text-primary font-bold gap-2">
-              <Instagram className="h-4 w-4" /> Visit Instagram
-            </Button>
-          </div>
-
-          <div className="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar pb-8 px-1">
-            {REELS.map((reel) => (
-              <motion.div 
-                key={reel.id}
-                whileHover={{ y: -5 }}
-                className="relative flex-shrink-0 w-[200px] md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
-              >
-                <Image 
-                  src={reel.image?.imageUrl || ''} 
-                  alt={reel.title} 
-                  fill 
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  data-ai-hint={reel.image?.imageHint}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="h-12 w-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40">
-                    <Play className="h-5 w-5 text-white fill-current" />
-                  </div>
-                </div>
-
-                <div className="absolute bottom-6 left-6 right-6 space-y-1">
-                  <p className="text-[10px] font-bold text-accent uppercase tracking-widest">{reel.tag}</p>
-                  <h4 className="text-white font-headline text-lg md:text-xl font-bold leading-tight">{reel.title}</h4>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Category Grid Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="flex flex-col items-center text-center mb-12 space-y-3">
@@ -482,6 +434,54 @@ export default function Home() {
             </div>
             <h4 className="font-bold text-sm uppercase tracking-wider">Secure Payment</h4>
             <p className="text-xs text-muted-foreground">Verified UPI Scan & Pay</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Studio Stories Section (Instagram Reel Style) */}
+      <section className="bg-white py-16 md:py-24 border-b overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
+            <div className="text-center md:text-left space-y-2">
+              <div className="flex items-center justify-center md:justify-start gap-3 text-primary">
+                <Instagram className="h-5 w-5" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Follow @PehnavaByNeha</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-headline font-bold uppercase">Studio Stories</h2>
+            </div>
+            <Button variant="outline" className="rounded-full border-primary text-primary font-bold gap-2">
+              <Instagram className="h-4 w-4" /> Visit Instagram
+            </Button>
+          </div>
+
+          <div className="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar pb-8 px-1">
+            {REELS.map((reel) => (
+              <motion.div 
+                key={reel.id}
+                whileHover={{ y: -5 }}
+                className="relative flex-shrink-0 w-[200px] md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
+              >
+                <Image 
+                  src={reel.image?.imageUrl || ''} 
+                  alt={reel.title} 
+                  fill 
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  data-ai-hint={reel.image?.imageHint}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="h-12 w-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40">
+                    <Play className="h-5 w-5 text-white fill-current" />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-6 left-6 right-6 space-y-1">
+                  <p className="text-[10px] font-bold text-accent uppercase tracking-widest">{reel.tag}</p>
+                  <h4 className="text-white font-headline text-lg md:text-xl font-bold leading-tight">{reel.title}</h4>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
