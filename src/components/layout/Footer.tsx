@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -104,10 +105,10 @@ export function Footer() {
           <div className="flex flex-col space-y-6">
             <h4 className="font-bold text-sm uppercase tracking-widest text-primary">Shopping</h4>
             <nav className="flex flex-col space-y-3">
+              <Link href="/about" className="text-sm hover:text-primary transition-colors">Our Story</Link>
               <Link href="/collections/ethnic-wear" className="text-sm hover:text-primary transition-colors">Ethnic Wear</Link>
               <Link href="/collections/sarees" className="text-sm hover:text-primary transition-colors">Sarees</Link>
               <Link href="/collections/western-fusion" className="text-sm hover:text-primary transition-colors">Western & Fusion</Link>
-              <Link href="/collections/accessories" className="text-sm hover:text-primary transition-colors">Accessories</Link>
               <Link href="/collections/sale" className="text-sm text-primary font-bold hover:underline">Clearance Sale</Link>
             </nav>
           </div>

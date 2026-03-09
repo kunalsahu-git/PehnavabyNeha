@@ -62,6 +62,7 @@ export function Header() {
                 <div className="flex-1 overflow-y-auto px-6 py-8 no-scrollbar">
                   <nav className="flex flex-col space-y-7">
                     <Link href="/" className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-colors">Home</Link>
+                    <Link href="/about" className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-colors">Our Story</Link>
                     <Separator className="opacity-50" />
                     {NAV_LINKS.map((link) => (
                       <Link
@@ -110,6 +111,12 @@ export function Header() {
 
           {/* Desktop Nav - Hidden on Mobile/Tablet */}
           <nav className="hidden lg:flex items-center space-x-10 xl:space-x-12">
+             <Link
+                href="/about"
+                className="text-[11px] font-bold uppercase tracking-[0.25em] transition-all hover:text-primary hover:-translate-y-0.5 whitespace-nowrap text-foreground/70"
+              >
+                Our Story
+              </Link>
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.name}

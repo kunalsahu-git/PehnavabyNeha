@@ -59,6 +59,36 @@
       "description": "Emerald Green Fusion Jumpsuit",
       "imageUrl": "https://picsum.photos/seed/green-fusion/600/800",
       "imageHint": "modern ethnic"
+    },
+    {
+      "id": "about-hero",
+      "description": "Neha in the Jaipur studio",
+      "imageUrl": "https://picsum.photos/seed/boutique-owner/1200/800",
+      "imageHint": "fashion designer"
+    },
+    {
+      "id": "craftsmanship",
+      "description": "Traditional hand-blocking process",
+      "imageUrl": "https://picsum.photos/seed/jaipur-print/1000/1000",
+      "imageHint": "textile art"
+    },
+    {
+      "id": "reel-1",
+      "description": "Boutique BTS Reel",
+      "imageUrl": "https://picsum.photos/seed/bts-1/600/1000",
+      "imageHint": "studio video"
+    },
+    {
+      "id": "reel-2",
+      "description": "Customer Spotlight Reel",
+      "imageUrl": "https://picsum.photos/seed/customer-1/600/1000",
+      "imageHint": "happy customer"
+    },
+    {
+      "id": "reel-3",
+      "description": "Saree Draping Reel",
+      "imageUrl": "https://picsum.photos/seed/drape-1/600/1000",
+      "imageHint": "fashion styling"
     }
   ]
 }

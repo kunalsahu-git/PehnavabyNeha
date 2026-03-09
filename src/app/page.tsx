@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck, Minus, Plus, ShoppingBag, RotateCcw, Banknote, Lock, MapPin } from "lucide-react";
+import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck, Minus, Plus, ShoppingBag, RotateCcw, Banknote, Lock, MapPin, Instagram, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
@@ -12,6 +12,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import { useCart } from "@/context/CartContext";
+import { motion } from "framer-motion";
 
 const CATEGORIES = [
   { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageHint || '', href: "/collections/ethnic-wear" },
@@ -34,6 +35,14 @@ const SALE_PRODUCTS = [
   { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true },
   { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isSale: true },
   { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isSale: true },
+];
+
+const REELS = [
+  { id: 1, title: 'Boutique BTS', tag: '#StudioVibes', image: PlaceHolderImages.find(i => i.id === 'reel-1') },
+  { id: 2, title: 'Styling the Silk', tag: '#NehaStyles', image: PlaceHolderImages.find(i => i.id === 'reel-3') },
+  { id: 3, title: 'Happy Customer', tag: '#PehnavaFamily', image: PlaceHolderImages.find(i => i.id === 'reel-2') },
+  { id: 4, title: 'Jaipur Diaries', tag: '#Heritage', image: PlaceHolderImages.find(i => i.id === 'cat-ethnic') },
+  { id: 5, title: 'Fusion Friday', tag: '#ModernEthnic', image: PlaceHolderImages.find(i => i.id === 'reel-1') },
 ];
 
 const HERO_SLIDES = [
@@ -194,6 +203,54 @@ export default function Home() {
         </Carousel>
       </section>
 
+      {/* Studio Stories Section (Instagram Reel Style) */}
+      <section className="bg-white py-16 md:py-24 border-b overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
+            <div className="text-center md:text-left space-y-2">
+              <div className="flex items-center justify-center md:justify-start gap-3 text-primary">
+                <Instagram className="h-5 w-5" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Follow @PehnavaByNeha</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-headline font-bold uppercase">Studio Stories</h2>
+            </div>
+            <Button variant="outline" className="rounded-full border-primary text-primary font-bold gap-2">
+              <Instagram className="h-4 w-4" /> Visit Instagram
+            </Button>
+          </div>
+
+          <div className="flex gap-4 md:gap-8 overflow-x-auto no-scrollbar pb-8 px-1">
+            {REELS.map((reel) => (
+              <motion.div 
+                key={reel.id}
+                whileHover={{ y: -5 }}
+                className="relative flex-shrink-0 w-[200px] md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden shadow-lg group cursor-pointer"
+              >
+                <Image 
+                  src={reel.image?.imageUrl || ''} 
+                  alt={reel.title} 
+                  fill 
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  data-ai-hint={reel.image?.imageHint}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="h-12 w-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40">
+                    <Play className="h-5 w-5 text-white fill-current" />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-6 left-6 right-6 space-y-1">
+                  <p className="text-[10px] font-bold text-accent uppercase tracking-widest">{reel.tag}</p>
+                  <h4 className="text-white font-headline text-lg md:text-xl font-bold leading-tight">{reel.title}</h4>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Category Grid Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="flex flex-col items-center text-center mb-12 space-y-3">
@@ -220,7 +277,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Sale Section - Infinite Auto Scroll (MOVED ABOVE FEATURED) */}
+      {/* Sale Section - Infinite Auto Scroll */}
       <section className="bg-background py-16 md:py-24 overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-end justify-between mb-12">
@@ -254,12 +311,6 @@ export default function Home() {
               <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
             </div>
           </Carousel>
-
-          <div className="mt-12 flex md:hidden justify-center">
-             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
-               <Link href="/collections/sale">View All Sale Items</Link>
-             </Button>
-          </div>
         </div>
       </section>
 
@@ -398,80 +449,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* New Arrivals Section */}
-      <section className="bg-secondary/30 py-16 md:py-24 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex items-end justify-between mb-12">
-            <div className="space-y-2">
-              <h2 className="text-3xl md:text-5xl font-headline font-bold">New Arrivals</h2>
-              <p className="text-muted-foreground">The latest trends fresh from our boutique.</p>
-            </div>
-            <Link href="/collections/new-arrivals" className="hidden md:flex items-center text-primary font-bold hover:underline">
-              View All <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </div>
-          
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            plugins={[autoplayArrivals.current]}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-4 md:-ml-6">
-              {NEW_ARRIVALS.map((product) => (
-                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
-                  <ProductCard {...product} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            
-            <div className="flex justify-center md:justify-end gap-4 mt-10">
-              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
-              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
-            </div>
-          </Carousel>
-
-          <div className="mt-12 flex md:hidden justify-center">
-             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
-               <Link href="/collections/new-arrivals">View All Products</Link>
-             </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Shop the Look Section */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
-        <div className="flex flex-col items-center text-center mb-16 space-y-3">
-          <span className="text-primary font-bold uppercase tracking-widest text-sm">Editorial</span>
-          <h2 className="text-3xl md:text-5xl font-headline font-bold">Shop the Look</h2>
-          <p className="text-muted-foreground max-w-xl">Get inspired by our curated ensembles for the modern South Asian woman.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="group relative aspect-[3/4] overflow-hidden rounded-2xl cursor-pointer shadow-lg hover:shadow-2xl transition-shadow duration-500">
-              <Image
-                src={PlaceHolderImages[i + 4].imageUrl}
-                alt="Shop the look"
-                fill
-                className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                data-ai-hint={PlaceHolderImages[i + 4].imageHint}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end p-8 text-white space-y-4">
-                <h3 className="text-2xl md:text-3xl font-headline font-bold tracking-tight">Midnight Soiree</h3>
-                <Button 
-                  className="bg-white text-primary hover:bg-primary hover:text-white rounded-full px-8 font-bold transition-all transform group-hover:scale-105 shadow-lg border-none"
-                >
-                  Shop Outfit
-                </Button>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
