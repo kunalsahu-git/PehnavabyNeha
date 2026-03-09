@@ -24,10 +24,16 @@ const CATEGORIES = [
 const NEW_ARRIVALS = [
   { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isNew: true },
   { id: '2', slug: 'gold-motif-kurta', name: 'Gold Floral Motif Kurta Set', category: 'Ethnic Sets', price: 3499, originalPrice: 4499, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true },
-  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true },
   { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true },
   { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isNew: true },
   { id: '6', slug: 'ivory-anarkali', name: 'Ivory Hand-painted Anarkali', category: 'Ethnic Sets', price: 5499, image: PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '', isBestseller: true },
+];
+
+const SALE_PRODUCTS = [
+  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true },
+  { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true },
+  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isSale: true },
+  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isSale: true },
 ];
 
 const HERO_SLIDES = [
@@ -92,6 +98,10 @@ export default function Home() {
 
   const autoplayArrivals = useRef(
     Autoplay({ delay: 3500, stopOnInteraction: false })
+  );
+
+  const autoplaySale = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: false })
   );
 
   useEffect(() => {
@@ -168,7 +178,6 @@ export default function Home() {
             <CarouselNext className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
           </div>
 
-          {/* Dots Navigation */}
           <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
             {Array.from({ length: count }).map((_, i) => (
               <button
@@ -211,14 +220,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Product Section - Inspired by high-end fashion */}
+      {/* Featured Product Section */}
       <section className="bg-white py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-widest uppercase">Featured Product</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 max-w-6xl mx-auto">
-            {/* Gallery Side - Reduced Size Container */}
             <div className="space-y-4 max-w-md mx-auto lg:mx-0 w-full">
               <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-secondary/20 shadow-xl">
                 <Image
@@ -245,7 +253,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Info Side */}
             <div className="flex flex-col space-y-8">
               <div className="space-y-4">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{FEATURED_PRODUCT.brand}</span>
@@ -263,7 +270,6 @@ export default function Home() {
 
               <div className="h-px bg-border" />
 
-              {/* Selection */}
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Size:</label>
@@ -332,7 +338,6 @@ export default function Home() {
                 </Button>
               </div>
 
-              {/* Trust Badges */}
               <div className="grid grid-cols-3 md:grid-cols-6 gap-4 pt-4 border-t">
                 {[
                   { icon: RotateCcw, label: '15 Days Return' },
@@ -391,6 +396,49 @@ export default function Home() {
           <div className="mt-12 flex md:hidden justify-center">
              <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
                <Link href="/collections/new-arrivals">View All Products</Link>
+             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Sale Section - Infinite Auto Scroll */}
+      <section className="bg-background py-16 md:py-24 overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex items-end justify-between mb-12">
+            <div className="space-y-2">
+              <h2 className="text-3xl md:text-5xl font-headline font-bold text-primary">Special Offers</h2>
+              <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Unbeatable prices on luxury pieces</p>
+            </div>
+            <Link href="/collections/sale" className="hidden md:flex items-center text-primary font-bold hover:underline">
+              Shop The Sale <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[autoplaySale.current]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4 md:-ml-6">
+              {SALE_PRODUCTS.map((product) => (
+                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <ProductCard {...product} />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            
+            <div className="flex justify-center md:justify-end gap-4 mt-10">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+            </div>
+          </Carousel>
+
+          <div className="mt-12 flex md:hidden justify-center">
+             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
+               <Link href="/collections/sale">View All Sale Items</Link>
              </Button>
           </div>
         </div>
