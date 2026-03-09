@@ -384,7 +384,3 @@ export default function OrdersAdminPage() {
     </div>
   );
 }
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}
