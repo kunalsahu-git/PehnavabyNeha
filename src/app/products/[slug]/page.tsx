@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   Lock,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,13 @@ import { ALL_PRODUCTS, Product } from "@/lib/store-data";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/store/ProductCard";
+import { Progress } from "@/components/ui/progress";
+
+const REVIEWS = [
+  { id: 1, name: "Adhuna", rating: 5, date: "Jan 09, 2026", comment: "Love the floral print" },
+  { id: 2, name: "Chitrangda", rating: 4, date: "Dec 15, 2025", comment: "The fabric felt soft and lightweight, perfect for casual outings" },
+  { id: 3, name: "Babita", rating: 4, date: "Dec 15, 2025", comment: "Comfortable outfit and nice fabric." },
+];
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -339,9 +347,83 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         </div>
       </div>
 
+      {/* Customer Reviews Section */}
+      <section className="container mx-auto px-4 py-24 border-t mt-32">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-12 items-start justify-between">
+            {/* Review Summary */}
+            <div className="w-full md:w-1/3 flex flex-col items-center md:items-start text-center md:text-left">
+              <h2 className="text-lg font-bold text-muted-foreground uppercase tracking-widest mb-6">Customer reviews</h2>
+              <div className="flex items-center gap-4 mb-2">
+                <span className="text-6xl font-headline font-bold">4.3</span>
+                <span className="text-2xl text-muted-foreground">/ 5</span>
+              </div>
+              <div className="flex items-center gap-1 text-accent mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className={cn("h-5 w-5 fill-current", i < 4 ? "text-accent" : "text-muted-foreground/30")} />
+                ))}
+                <span className="text-sm text-muted-foreground font-bold ml-2">3 reviews</span>
+              </div>
+              
+              {/* Star Breakdown */}
+              <div className="w-full space-y-3 mt-4">
+                {[5, 4, 3, 2, 1].map((star) => (
+                  <div key={star} className="flex items-center gap-3">
+                    <span className="text-xs font-bold flex items-center gap-1 min-w-[24px]">
+                      {star} <Star className="h-3 w-3 fill-accent text-accent" />
+                    </span>
+                    <Progress value={star === 5 ? 33 : star === 4 ? 66 : 0} className="h-2 flex-1" />
+                    <span className="text-[10px] font-bold text-muted-foreground w-4">
+                      {star === 5 ? 1 : star === 4 ? 2 : 0}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Write a review button */}
+            <div className="hidden md:flex flex-col items-end">
+               <Button className="bg-slate-800 text-white rounded-md px-10 h-12 hover:bg-slate-900 transition-colors">
+                 Write a review
+               </Button>
+            </div>
+            <div className="flex md:hidden w-full">
+               <Button className="w-full bg-slate-800 text-white rounded-md h-12">
+                 Write a review
+               </Button>
+            </div>
+          </div>
+
+          {/* Review Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 overflow-x-auto pb-4 no-scrollbar">
+            {REVIEWS.map((review) => (
+              <div key={review.id} className="bg-white p-8 rounded-sm shadow-sm border border-slate-100 flex flex-col gap-4 min-w-[300px]">
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={cn("h-4 w-4 fill-current", i < review.rating ? "text-accent" : "text-muted-foreground/30")} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{review.date}</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold flex items-center gap-2">
+                    {review.name}
+                    <span className="inline-flex items-center" title="India">🇮🇳</span>
+                  </h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-2 italic">
+                    "{review.comment}"
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Recommended Section */}
       {relatedProducts.length > 0 && (
-        <section className="container mx-auto px-4 mt-32 border-t pt-20">
+        <section className="container mx-auto px-4 mt-10 border-t pt-20">
           <div className="flex flex-col items-center text-center mb-16 space-y-4">
             <h2 className="text-3xl md:text-5xl font-headline font-bold uppercase tracking-wider">You May Also Like</h2>
             <div className="h-1 w-24 bg-accent/40 rounded-full" />
