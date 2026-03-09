@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowLeft, MessageSquare, ShieldCheck, Loader2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,13 +10,27 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
+const RESEND_TIMER_SECONDS = 30;
+
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const { toast } = useToast();
   const auth = useAuth();
+
+  // Handle countdown timer for Resend OTP
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +48,27 @@ export default function LoginPage() {
     setTimeout(() => {
       setIsLoading(false);
       setStep('otp');
+      setResendTimer(RESEND_TIMER_SECONDS);
       toast({
         title: "OTP Sent!",
         description: "A 6-digit code has been sent to your WhatsApp number."
       });
     }, 1500);
+  };
+
+  const handleResendOtp = () => {
+    if (resendTimer > 0) return;
+    
+    setIsLoading(true);
+    // Simulate resending OTP
+    setTimeout(() => {
+      setIsLoading(false);
+      setResendTimer(RESEND_TIMER_SECONDS);
+      toast({
+        title: "OTP Resent",
+        description: "A new code has been sent to your WhatsApp."
+      });
+    }, 1000);
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -151,9 +180,13 @@ export default function LoginPage() {
             <div className="text-center pt-2">
               <button 
                 type="button" 
-                className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.1em]"
+                disabled={resendTimer > 0 || isLoading}
+                onClick={handleResendOtp}
+                className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.1em] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Didn't receive code? Resend in 30s
+                {resendTimer > 0 
+                  ? `Didn't receive code? Resend in ${resendTimer}s` 
+                  : "Didn't receive code? Resend Code"}
               </button>
             </div>
           </form>
