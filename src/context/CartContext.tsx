@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 
 export type CartItem = {
   id: string;
@@ -30,7 +29,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     const saved = localStorage.getItem("pehnava_cart");
@@ -55,10 +53,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, newItem];
     });
-    toast({
-      title: "Added to cart",
-      description: `${newItem.name} has been added.`,
-    });
+    // Removed toast to adhere to error-only guidelines and prevent UI blocking
     setIsOpen(true);
   };
 
