@@ -9,6 +9,9 @@ export type Product = {
   price: number;
   originalPrice?: number;
   image: string;
+  images?: string[];
+  description?: string;
+  details?: string[];
   isNew?: boolean;
   isSale?: boolean;
   isBestseller?: boolean;
@@ -83,8 +86,63 @@ export const CATEGORIES: CategoryMeta[] = [
 ];
 
 export const ALL_PRODUCTS: Product[] = [
-  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', categorySlug: 'sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isNew: true, createdAt: '2024-01-01', colors: ['Red'], sizes: ['Free Size'], fabric: 'Silk' },
-  { id: '2', slug: 'gold-motif-kurta', name: 'Gold Floral Motif Kurta Set', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 3499, originalPrice: 4499, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-05', colors: ['Gold', 'Yellow'], sizes: ['S', 'M', 'L'], fabric: 'Cotton' },
+  { 
+    id: '1', 
+    slug: 'crimson-silk-saree', 
+    name: 'Crimson Embroidered Silk Saree', 
+    category: 'Sarees', 
+    categorySlug: 'sarees', 
+    price: 4999, 
+    originalPrice: 6999, 
+    image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', 
+    images: [
+      PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '',
+      PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '',
+      PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '',
+      PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '',
+    ],
+    description: "Embrace elegance with our Crimson Embroidered Silk Saree. Handcrafted with precision, this piece features intricate zari work and a luxurious drape perfect for weddings and festive celebrations.",
+    details: [
+      "Fabric: Premium Silk",
+      "Work: Hand Embroidery with Zari",
+      "Occasion: Wedding, Festive",
+      "Care: Dry Clean Only",
+      "In the Box: 1 Saree with unstitched blouse piece"
+    ],
+    isNew: true, 
+    createdAt: '2024-01-01', 
+    colors: ['Crimson', 'Gold'], 
+    sizes: ['Free Size'], 
+    fabric: 'Silk' 
+  },
+  { 
+    id: '2', 
+    slug: 'gold-motif-kurta', 
+    name: 'Gold Floral Motif Kurta Set', 
+    category: 'Ethnic Sets', 
+    categorySlug: 'ethnic-wear', 
+    price: 3499, 
+    originalPrice: 4499, 
+    image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', 
+    images: [
+      PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '',
+      PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '',
+      PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '',
+    ],
+    description: "This Gold Floral Motif Kurta Set is a testament to timeless grace. Crafted from breathable cotton, it features delicate floral prints highlighted with golden motifs.",
+    details: [
+      "Fabric: Cotton",
+      "Style: Straight Fit",
+      "Occasion: Daily Wear, Festive",
+      "Care: Gentle Hand Wash",
+      "In the Box: Kurta, Pants, and Dupatta"
+    ],
+    isBestseller: true, 
+    createdAt: '2024-01-05', 
+    colors: ['Gold', 'Yellow'], 
+    sizes: ['S', 'M', 'L', 'XL'], 
+    fabric: 'Cotton' 
+  },
   { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true, createdAt: '2023-12-15', colors: ['Pink'], sizes: ['M', 'L', 'XL'], fabric: 'Silk' },
   { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', categorySlug: 'western-fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true, createdAt: '2024-02-10', colors: ['Green'], sizes: ['XS', 'S', 'M'], fabric: 'Chiffon' },
   { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', categorySlug: 'accessories', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isNew: true, createdAt: '2024-02-15', colors: ['White', 'Pearl'], fabric: 'Mixed Media' },
