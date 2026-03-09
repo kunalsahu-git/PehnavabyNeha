@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -17,7 +16,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Loader2,
-  Tag
+  Tag,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -71,27 +71,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // If user is logged in but not an admin (no document in roles_admin)
-  if (!adminRole && user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-[2rem] shadow-xl border p-10 text-center space-y-6">
-          <div className="h-20 w-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-            <ShieldCheck className="h-10 w-10 text-red-500" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-headline font-bold uppercase">Access Denied</h1>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              You do not have administrator privileges for Pehnava by Neha. Please contact human support if you believe this is an error.
-            </p>
-          </div>
-          <Button asChild className="w-full rounded-full h-12 font-bold uppercase text-[10px] tracking-widest">
-            <Link href="/">Back to Boutique</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // DEVELOPMENT BYPASS: If user is logged in but not an admin (no document in roles_admin), 
+  // allow access for now but show a warning banner as requested.
+  const isDevBypass = !!user && !adminRole;
 
   return (
     <div className="flex min-h-screen bg-slate-50/50">
@@ -129,7 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-t border-white/5 space-y-4">
           <div className="bg-white/5 rounded-2xl p-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center font-bold text-slate-900">
-              {user?.displayName?.[0] || 'A'}
+              {user?.displayName?.[0] || user?.email?.[0] || 'A'}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold truncate">{user?.displayName || 'Administrator'}</p>
@@ -160,6 +142,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col pt-16 lg:pt-0">
+        {isDevBypass && (
+          <div className="bg-amber-50 border-b border-amber-100 p-3 flex items-center justify-center gap-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
+              Development Mode: Admin Access Granted without Firestore Role Verification
+            </span>
+          </div>
+        )}
         <div className="p-4 md:p-8 lg:p-12">
           {children}
         </div>

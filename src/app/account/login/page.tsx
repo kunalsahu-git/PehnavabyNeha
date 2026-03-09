@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, ShieldCheck, Loader2, FastForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { useRouter } from 'next/navigation';
 
 const RESEND_TIMER_SECONDS = 30;
 
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const { toast } = useToast();
   const auth = useAuth();
+  const router = useRouter();
 
   // Handle countdown timer for Resend OTP
   useEffect(() => {
@@ -31,6 +33,19 @@ export default function LoginPage() {
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  const handleDirectLogin = async () => {
+    setIsLoading(true);
+    // Directly sign in for development purposes as requested
+    setTimeout(() => {
+      initiateAnonymousSignIn(auth);
+      toast({
+        title: "Development Login",
+        description: "Bypassing OTP for faster development testing."
+      });
+      router.push('/admin');
+    }, 1000);
+  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,10 +103,9 @@ export default function LoginPage() {
       initiateAnonymousSignIn(auth);
       toast({
         title: "Welcome Back!",
-        description: "Successfully signed in with WhatsApp OTP."
+        description: "Successfully signed in."
       });
-      // In a real app, we'd redirect here.
-      window.location.href = '/';
+      router.push('/');
     }, 1500);
   };
 
@@ -108,41 +122,57 @@ export default function LoginPage() {
           <h1 className="text-3xl font-headline font-bold uppercase tracking-wider">Welcome</h1>
           <p className="text-muted-foreground text-sm max-w-[280px]">
             {step === 'phone' 
-              ? "Enter your WhatsApp number to receive an instant login code." 
-              : "We've sent a 6-digit code to your WhatsApp. Please enter it below."}
+              ? "Enter your WhatsApp number to login." 
+              : "We've sent a 6-digit code to your WhatsApp."}
           </p>
         </div>
 
         {step === 'phone' ? (
-          <form onSubmit={handleSendOtp} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Phone Number</Label>
-              <div className="relative group">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r pr-3">+91</span>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="98765 43210"
-                  className="pl-16 h-14 rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-lg font-bold tracking-widest"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  required
-                />
+          <div className="space-y-6">
+            <form onSubmit={handleSendOtp} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Phone Number</Label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r pr-3">+91</span>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="98765 43210"
+                    className="pl-16 h-14 rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-lg font-bold tracking-widest"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    required
+                  />
+                </div>
               </div>
+
+              <Button 
+                type="submit" 
+                disabled={isLoading || phone.length < 10}
+                className="w-full h-14 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-[0.98] transition-all"
+              >
+                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                  <div className="flex items-center gap-2">
+                    Send OTP via WhatsApp <MessageSquare className="h-4 w-4" />
+                  </div>
+                )}
+              </Button>
+            </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Development Only</span></div>
             </div>
 
             <Button 
-              type="submit" 
-              disabled={isLoading || phone.length < 10}
-              className="w-full h-14 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-[0.98] transition-all"
+              onClick={handleDirectLogin}
+              variant="outline"
+              disabled={isLoading}
+              className="w-full h-14 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary font-bold text-xs uppercase tracking-[0.2em] transition-all"
             >
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                <div className="flex items-center gap-2">
-                  Send OTP via WhatsApp <MessageSquare className="h-4 w-4" />
-                </div>
-              )}
+              Skip OTP & Enter Admin Panel <FastForward className="ml-2 h-4 w-4" />
             </Button>
-          </form>
+          </div>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-6">
             <div className="space-y-2">
