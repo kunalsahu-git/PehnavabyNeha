@@ -229,6 +229,45 @@ export default function Home() {
         </div>
       </section>
 
+      {/* New Arrivals Section */}
+      <section className="bg-secondary/10 py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-4">
+            <div className="space-y-2 text-center md:text-left">
+              <h2 className="text-3xl md:text-5xl font-headline font-bold">New Arrivals</h2>
+              <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Fresh from our Jaipur Studio</p>
+            </div>
+            <Button asChild variant="link" className="text-primary font-bold">
+              <Link href="/collections/new-arrivals" className="flex items-center">
+                Explore All <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[autoplayArrivals.current]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4 md:-ml-6">
+              {NEW_ARRIVALS.map((product) => (
+                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <ProductCard {...product} />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            
+            <div className="flex justify-center md:justify-end gap-4 mt-10">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+            </div>
+          </Carousel>
+        </div>
+      </section>
+
       {/* Sale Section - Infinite Auto Scroll */}
       <section className="bg-background py-16 md:py-24 overflow-hidden">
         <div className="container mx-auto px-4">
