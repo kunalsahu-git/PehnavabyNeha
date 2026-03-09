@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -8,6 +7,7 @@ import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { SearchModal } from "@/components/layout/SearchModal";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const NAV_LINKS = [
@@ -78,17 +78,21 @@ export function Header() {
           </nav>
 
           {/* Icons */}
-          <div className="flex items-center space-x-2 md:space-x-4">
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
+          <div className="flex items-center space-x-1 sm:space-x-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsSearchOpen(true)}
+            >
               <Search className="h-5 w-5" />
             </Button>
-            <Link href="/account/login">
+            <Link href="/account/login" className="hidden sm:flex">
               <Button variant="ghost" size="icon">
                 <User className="h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/wishlist">
-              <Button variant="ghost" size="icon" className="hidden sm:flex">
+            <Link href="/wishlist" className="hidden sm:flex">
+              <Button variant="ghost" size="icon">
                 <Heart className="h-5 w-5" />
               </Button>
             </Link>
@@ -109,6 +113,7 @@ export function Header() {
         </div>
       </div>
       <CartDrawer />
+      <SearchModal isOpen={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </header>
   );
 }
