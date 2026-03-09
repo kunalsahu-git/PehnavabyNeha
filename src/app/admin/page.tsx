@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                 "Your 'Festive Wedding Edit' collection is performing 20% better than last month. Consider featuring more Ivory and Gold pieces on the homepage."
               </p>
             </CardContent>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
