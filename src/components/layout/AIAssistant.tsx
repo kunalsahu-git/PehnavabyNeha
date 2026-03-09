@@ -37,7 +37,7 @@ export function AIAssistant() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isOpen]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,10 +89,10 @@ export function AIAssistant() {
             initial={{ opacity: 0, y: 20, scale: 0.95, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-40 right-6 z-[60] w-[320px] sm:w-[380px] bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden flex flex-col"
+            className="fixed bottom-40 right-6 z-[60] w-[320px] sm:w-[380px] h-[500px] bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden flex flex-col"
           >
             {/* Header */}
-            <div className="bg-primary p-6 text-white flex items-center justify-between">
+            <div className="bg-primary p-6 text-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/10">
                   <Sparkles className="h-5 w-5" />
@@ -110,10 +110,10 @@ export function AIAssistant() {
               </button>
             </div>
 
-            {/* Chat Body - Standard Scrollable Div for Chat Reliability */}
+            {/* Chat Body - Scrollable Area */}
             <div 
               ref={scrollRef}
-              className="flex-1 p-6 overflow-y-auto h-[350px] scroll-smooth no-scrollbar"
+              className="flex-1 p-6 overflow-y-auto overflow-x-hidden scroll-smooth"
             >
               <div className="space-y-6">
                 {messages.map((msg, idx) => (
@@ -146,7 +146,7 @@ export function AIAssistant() {
             </div>
 
             {/* Quick Actions */}
-            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0 border-t bg-white/50">
               {[
                 { icon: Info, label: 'Return Policy' },
                 { icon: ShoppingBag, label: 'Track Order' },
@@ -163,7 +163,7 @@ export function AIAssistant() {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-6 border-t shrink-0">
+            <form onSubmit={handleSend} className="p-6 border-t shrink-0 bg-white">
               <div className="relative">
                 <Input
                   value={input}
