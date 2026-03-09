@@ -220,6 +220,49 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Sale Section - Infinite Auto Scroll (MOVED ABOVE FEATURED) */}
+      <section className="bg-background py-16 md:py-24 overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex items-end justify-between mb-12">
+            <div className="space-y-2">
+              <h2 className="text-3xl md:text-5xl font-headline font-bold text-primary">Special Offers</h2>
+              <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Unbeatable prices on luxury pieces</p>
+            </div>
+            <Link href="/collections/sale" className="hidden md:flex items-center text-primary font-bold hover:underline">
+              Shop The Sale <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </div>
+          
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[autoplaySale.current]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4 md:-ml-6">
+              {SALE_PRODUCTS.map((product) => (
+                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <ProductCard {...product} />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            
+            <div className="flex justify-center md:justify-end gap-4 mt-10">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+            </div>
+          </Carousel>
+
+          <div className="mt-12 flex md:hidden justify-center">
+             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
+               <Link href="/collections/sale">View All Sale Items</Link>
+             </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Product Section */}
       <section className="bg-white py-16 md:py-24">
         <div className="container mx-auto px-4">
@@ -396,49 +439,6 @@ export default function Home() {
           <div className="mt-12 flex md:hidden justify-center">
              <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
                <Link href="/collections/new-arrivals">View All Products</Link>
-             </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Sale Section - Infinite Auto Scroll */}
-      <section className="bg-background py-16 md:py-24 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex items-end justify-between mb-12">
-            <div className="space-y-2">
-              <h2 className="text-3xl md:text-5xl font-headline font-bold text-primary">Special Offers</h2>
-              <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">Unbeatable prices on luxury pieces</p>
-            </div>
-            <Link href="/collections/sale" className="hidden md:flex items-center text-primary font-bold hover:underline">
-              Shop The Sale <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </div>
-          
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            plugins={[autoplaySale.current]}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-4 md:-ml-6">
-              {SALE_PRODUCTS.map((product) => (
-                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
-                  <ProductCard {...product} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            
-            <div className="flex justify-center md:justify-end gap-4 mt-10">
-              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
-              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
-            </div>
-          </Carousel>
-
-          <div className="mt-12 flex md:hidden justify-center">
-             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
-               <Link href="/collections/sale">View All Sale Items</Link>
              </Button>
           </div>
         </div>
