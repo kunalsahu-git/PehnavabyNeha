@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { whatsappCustomerAssistant } from '@/ai/flows/whatsapp-customer-assistant';
 import { useUser } from '@/firebase';
 import { cn } from '@/lib/utils';
@@ -38,7 +37,7 @@ export function AIAssistant() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,8 +110,11 @@ export function AIAssistant() {
               </button>
             </div>
 
-            {/* Chat Body */}
-            <ScrollArea className="flex-1 p-6 h-[350px]" viewportRef={scrollRef}>
+            {/* Chat Body - Standard Scrollable Div for Chat Reliability */}
+            <div 
+              ref={scrollRef}
+              className="flex-1 p-6 overflow-y-auto h-[350px] scroll-smooth no-scrollbar"
+            >
               <div className="space-y-6">
                 {messages.map((msg, idx) => (
                   <div key={idx} className={cn(
@@ -141,10 +143,10 @@ export function AIAssistant() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Quick Actions */}
-            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+            <div className="px-6 py-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
               {[
                 { icon: Info, label: 'Return Policy' },
                 { icon: ShoppingBag, label: 'Track Order' },
@@ -161,7 +163,7 @@ export function AIAssistant() {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-6 border-t">
+            <form onSubmit={handleSend} className="p-6 border-t shrink-0">
               <div className="relative">
                 <Input
                   value={input}
