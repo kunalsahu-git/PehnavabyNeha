@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Banner Section */}
-      <section className="relative h-[70vh] md:h-[90vh] w-full">
+      <section className="relative h-[80vh] md:h-[90vh] w-full bg-secondary">
         <Carousel opts={{ loop: true }} className="h-full w-full">
           <CarouselContent className="h-full ml-0">
             {HERO_SLIDES.map((slide) => (
@@ -56,12 +56,12 @@ export default function Home() {
                     src={slide.image?.imageUrl || ''}
                     alt={slide.title}
                     fill
-                    className="object-cover brightness-[0.8]"
+                    className="object-cover brightness-[0.75]"
                     priority={slide.id === 1}
                     data-ai-hint={slide.image?.imageHint}
                   />
-                  {/* Gradient Overlay for Text Readability */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+                  {/* Enhanced Gradient Overlay for Text Readability */}
+                  <div className="absolute inset-0 bg-black/40" />
                   
                   <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-6">
                     <span className="text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -74,10 +74,10 @@ export default function Home() {
                       {slide.description}
                     </p>
                     <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
-                      <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto">
+                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto shadow-xl">
                         Shop Now
                       </Button>
-                      <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 h-14 px-10 text-lg rounded-full w-full sm:w-auto">
+                      <Button size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white hover:text-primary h-14 px-10 text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-xl">
                         View Lookbook
                       </Button>
                     </div>
@@ -86,8 +86,11 @@ export default function Home() {
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="hidden lg:flex left-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/30 backdrop-blur-sm" />
-          <CarouselNext className="hidden lg:flex right-8 h-12 w-12 border-white/40 text-white bg-white/10 hover:bg-white/30 backdrop-blur-sm" />
+          {/* Enhanced Navigation Buttons */}
+          <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
+            <CarouselPrevious className="static translate-y-0 h-12 w-12 border-white/40 text-white bg-black/20 hover:bg-black/50 backdrop-blur-md pointer-events-auto" />
+            <CarouselNext className="static translate-y-0 h-12 w-12 border-white/40 text-white bg-black/20 hover:bg-black/50 backdrop-blur-md pointer-events-auto" />
+          </div>
         </Carousel>
       </section>
 
