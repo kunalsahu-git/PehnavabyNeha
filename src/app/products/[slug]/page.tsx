@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { 
@@ -24,7 +24,7 @@ import {
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
-} from "@/components/ui/accordion";
+} from "@/accordion";
 import { ALL_PRODUCTS, Product } from "@/lib/store-data";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
+  const zoomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const found = ALL_PRODUCTS.find(p => p.slug === slug);
@@ -78,6 +79,18 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     });
   };
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!zoomRef.current) return;
+    const { left, top, width, height } = zoomRef.current.getBoundingClientRect();
+    const x = ((e.pageX - left - window.scrollX) / width) * 100;
+    const y = ((e.pageY - top - window.scrollY) / height) * 100;
+    
+    const img = zoomRef.current.querySelector('img');
+    if (img) {
+      img.style.transformOrigin = `${x}% ${y}%`;
+    }
+  };
+
   const relatedProducts = ALL_PRODUCTS
     .filter(p => p.categorySlug === product.categorySlug && p.id !== product.id)
     .slice(0, 4);
@@ -96,7 +109,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       </div>
 
       <div className="container mx-auto px-4">
-        {/* Adjusted grid for smaller image: lg:grid-cols-2 (6/6 balance) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 max-w-6xl mx-auto">
           
           {/* Left: Image Gallery */}
@@ -109,7 +121,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     className={cn(
-                      "relative flex-shrink-0 w-20 aspect-square rounded-md overflow-hidden border-2 transition-all",
+                      "relative flex-shrink-0 w-20 aspect-[4/5] rounded-md overflow-hidden border-2 transition-all",
                       activeImageIndex === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
@@ -118,16 +130,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 ))}
               </div>
               
-              {/* Main Image with Hover Zoom */}
-              <div className="relative flex-1 aspect-square bg-secondary/20 rounded-xl overflow-hidden shadow-sm group cursor-zoom-in">
+              {/* Main Image with Precision Hover Zoom */}
+              <div 
+                ref={zoomRef}
+                onMouseMove={handleMouseMove}
+                className="relative flex-1 aspect-[4/5] max-h-[550px] bg-secondary/20 rounded-xl overflow-hidden shadow-sm group cursor-zoom-in"
+              >
                 <div className="h-full w-full overflow-hidden">
                   <Image
                     src={images[activeImageIndex]}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-150 origin-center"
+                    className="object-cover transition-transform duration-200 ease-out group-hover:scale-[2.5]"
                     priority
                     sizes="(max-width: 1024px) 100vw, 50vw"
+                    style={{ transformOrigin: 'center center' }}
                   />
                 </div>
                 
@@ -233,7 +250,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       onClick={() => setQuantity(q => Math.max(1, q - 1))} 
                       className="h-8 w-8 rounded-full hover:bg-primary/10"
                     >
-                      <CircleMinus className="h-4 w-4" />
+                      <Minus className="h-4 w-4" />
                     </Button>
                     <span className="w-12 text-center font-bold text-base">{quantity}</span>
                     <Button 
@@ -242,7 +259,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       onClick={() => setQuantity(q => q + 1)} 
                       className="h-8 w-8 rounded-full hover:bg-primary/10"
                     >
-                      <CirclePlus className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                   
@@ -344,11 +361,3 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     </div>
   );
 }
-
-// Fixed icon hallucinations from previous versions if any
-const CircleMinus = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
-);
-const CirclePlus = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-);
