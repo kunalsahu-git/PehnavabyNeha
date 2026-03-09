@@ -1,8 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 import { ALL_PRODUCTS } from '@/lib/store-data';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ type Purchase = {
   name: string;
   location: string;
   productName: string;
+  productSlug: string;
   image: string;
   time: string;
 };
@@ -34,6 +35,7 @@ export function RecentPurchasePopup() {
         name: randomName,
         location: randomLoc,
         productName: randomProduct.name,
+        productSlug: randomProduct.slug,
         image: randomProduct.image,
         time: `${randomMins} minutes ago`
       });
@@ -67,35 +69,47 @@ export function RecentPurchasePopup() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="pointer-events-auto flex w-[280px] md:w-[360px] bg-white rounded-lg shadow-[0_15px_50px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden relative"
+            className="pointer-events-auto flex w-[280px] md:w-[360px] bg-white rounded-lg shadow-[0_15px_50px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden relative group"
           >
+            {/* Close Button - Outside the main link to ensure it can be dismissed without navigating */}
             <button 
-              onClick={() => setIsVisible(false)}
-              className="absolute top-2 right-2 p-1 hover:bg-slate-50 rounded-full transition-colors z-10"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsVisible(false);
+              }}
+              className="absolute top-2 right-2 p-1 hover:bg-slate-100 rounded-full transition-colors z-20"
             >
               <X className="h-3.5 w-3.5 text-slate-400" />
             </button>
 
-            <div className="relative w-20 md:w-28 aspect-square flex-shrink-0 bg-secondary/10">
-              <Image
-                src={purchase.image}
-                alt={purchase.productName}
-                fill
-                className="object-cover"
-              />
-            </div>
+            {/* Main Content as a Link */}
+            <Link 
+              href={`/products/${purchase.productSlug}`}
+              className="flex w-full transition-all hover:bg-slate-50/80"
+              onClick={() => setIsVisible(false)}
+            >
+              <div className="relative w-20 md:w-28 aspect-square flex-shrink-0 bg-secondary/10">
+                <Image
+                  src={purchase.image}
+                  alt={purchase.productName}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
+              </div>
 
-            <div className="flex flex-col justify-center p-3 md:p-4 pr-7 space-y-0.5 md:space-y-1">
-              <p className="text-[12px] md:text-sm font-medium text-slate-600 leading-tight">
-                <span className="font-bold text-slate-900">{purchase.name}</span> from <span className="font-bold text-slate-900">{purchase.location}</span> purchased
-              </p>
-              <p className="text-[12px] md:text-sm font-bold text-primary truncate">
-                {purchase.productName}
-              </p>
-              <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                {purchase.time}
-              </p>
-            </div>
+              <div className="flex flex-col justify-center p-3 md:p-4 pr-7 space-y-0.5 md:space-y-1 overflow-hidden">
+                <p className="text-[12px] md:text-sm font-medium text-slate-600 leading-tight">
+                  <span className="font-bold text-slate-900">{purchase.name}</span> from <span className="font-bold text-slate-900">{purchase.location}</span> purchased
+                </p>
+                <p className="text-[12px] md:text-sm font-bold text-primary truncate">
+                  {purchase.productName}
+                </p>
+                <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  {purchase.time}
+                </p>
+              </div>
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>
