@@ -31,10 +31,10 @@ const NEW_ARRIVALS = [
 ];
 
 const SALE_PRODUCTS = [
-  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true },
-  { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true },
-  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isSale: true },
-  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isSale: true },
+  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true },
+  { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', categorySlug: 'accessories', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true },
+  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', categorySlug: 'sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isSale: true },
+  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', categorySlug: 'accessories', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isSale: true },
 ];
 
 const REELS = [
@@ -404,40 +404,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Strip */}
-      <section className="border-y bg-background py-12">
-        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-              <Truck className="h-7 w-7 text-primary" />
-            </div>
-            <h4 className="font-bold text-sm uppercase tracking-wider">Free Delivery</h4>
-            <p className="text-xs text-muted-foreground">On orders above ₹2999</p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-              <RefreshCw className="h-7 w-7 text-primary" />
-            </div>
-            <h4 className="font-bold text-sm uppercase tracking-wider">Easy Returns</h4>
-            <p className="text-xs text-muted-foreground">Within 7 days of delivery</p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-              <MessageSquare className="h-7 w-7 text-primary" />
-            </div>
-            <h4 className="font-bold text-sm uppercase tracking-wider">WhatsApp Support</h4>
-            <p className="text-xs text-muted-foreground">Instant help via chat</p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
-              <ShieldCheck className="h-7 w-7 text-primary" />
-            </div>
-            <h4 className="font-bold text-sm uppercase tracking-wider">Secure Payment</h4>
-            <p className="text-xs text-muted-foreground">Verified UPI Scan & Pay</p>
-          </div>
-        </div>
-      </section>
-
       {/* Studio Stories Section (Instagram Reel Style) */}
       <section className="bg-white py-16 md:py-24 border-b overflow-hidden">
         <div className="container mx-auto px-4">
@@ -482,6 +448,40 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Strip - NOW THE LAST SECTION */}
+      <section className="border-y bg-background py-12">
+        <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
+              <Truck className="h-7 w-7 text-primary" />
+            </div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">Free Delivery</h4>
+            <p className="text-xs text-muted-foreground">On orders above ₹2999</p>
+          </div>
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
+              <RefreshCw className="h-7 w-7 text-primary" />
+            </div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">Easy Returns</h4>
+            <p className="text-xs text-muted-foreground">Within 7 days of delivery</p>
+          </div>
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
+              <MessageSquare className="h-7 w-7 text-primary" />
+            </div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">WhatsApp Support</h4>
+            <p className="text-xs text-muted-foreground">Instant help via chat</p>
+          </div>
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="h-14 w-14 rounded-full bg-secondary flex items-center justify-center">
+              <ShieldCheck className="h-7 w-7 text-primary" />
+            </div>
+            <h4 className="font-bold text-sm uppercase tracking-wider">Secure Payment</h4>
+            <p className="text-xs text-muted-foreground">Verified UPI Scan & Pay</p>
           </div>
         </div>
       </section>
