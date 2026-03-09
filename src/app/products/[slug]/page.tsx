@@ -24,7 +24,7 @@ import {
   AccordionContent, 
   AccordionItem, 
   AccordionTrigger 
-} from "@/accordion";
+} from "@/components/ui/accordion";
 import { ALL_PRODUCTS, Product } from "@/lib/store-data";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
@@ -121,7 +121,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     className={cn(
-                      "relative flex-shrink-0 w-20 aspect-[4/5] rounded-md overflow-hidden border-2 transition-all",
+                      "relative flex-shrink-0 w-20 aspect-square rounded-md overflow-hidden border-2 transition-all",
                       activeImageIndex === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
                     )}
                   >
@@ -134,14 +134,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               <div 
                 ref={zoomRef}
                 onMouseMove={handleMouseMove}
-                className="relative flex-1 aspect-[4/5] max-h-[550px] bg-secondary/20 rounded-xl overflow-hidden shadow-sm group cursor-zoom-in"
+                className="relative flex-1 aspect-square max-h-[480px] bg-secondary/20 rounded-xl overflow-hidden shadow-sm group cursor-zoom-in"
               >
                 <div className="h-full w-full overflow-hidden">
                   <Image
                     src={images[activeImageIndex]}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-200 ease-out group-hover:scale-[2.5]"
+                    className="object-cover transition-transform duration-200 ease-out group-hover:scale-[2]"
                     priority
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     style={{ transformOrigin: 'center center' }}
