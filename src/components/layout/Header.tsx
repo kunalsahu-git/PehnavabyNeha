@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, Search, Heart, User, Menu, X } from "lucide-react";
+import { ShoppingBag, Search, Heart, User, Menu, X, LogOut, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -11,6 +12,16 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { SearchModal } from "@/components/layout/SearchModal";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NAV_LINKS = [
   { name: "Ethnic Wear", href: "/collections/ethnic-wear" },
@@ -24,6 +35,12 @@ export function Header() {
   const { itemCount, setIsOpen } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { user } = useUser();
+  const auth = useAuth();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,9 +80,15 @@ export function Header() {
                         <Badge variant="secondary" className="bg-accent/10 text-accent font-bold px-2 py-0.5">{wishlistCount}</Badge>
                       )}
                     </Link>
-                    <Link href="/account/login" className="text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center gap-3">
-                      <User className="h-5 w-5 opacity-40" /> Account
-                    </Link>
+                    {user ? (
+                      <button onClick={handleLogout} className="text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center gap-3">
+                        <LogOut className="h-5 w-5 opacity-40" /> Logout
+                      </button>
+                    ) : (
+                      <Link href="/account/login" className="text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center gap-3">
+                        <User className="h-5 w-5 opacity-40" /> Login
+                      </Link>
+                    )}
                   </nav>
                 </div>
                 <div className="p-8 border-t bg-secondary/10 mt-auto">
@@ -109,11 +132,39 @@ export function Header() {
               <Search className="h-5 w-5" />
             </Button>
             
-            <Link href="/account/login" className="hidden lg:flex">
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
-                <User className="h-5 w-5" />
-              </Button>
-            </Link>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
+                    <UserCircle className="h-5 w-5 text-primary" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl">
+                  <DropdownMenuLabel className="font-headline text-lg">My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/profile" className="cursor-pointer py-2">Profile Details</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders" className="cursor-pointer py-2">Order History</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/wishlist" className="cursor-pointer py-2">My Wishlist</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer py-2 text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/account/login">
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
+                  <User className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
 
             <Link href="/wishlist" className="hidden sm:flex relative">
               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
