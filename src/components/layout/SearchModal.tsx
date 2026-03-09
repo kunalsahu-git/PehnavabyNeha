@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react';
 import { Search, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogHeader } from '@/components/ui/dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ALL_PRODUCTS, Product } from '@/lib/store-data';
 import { Button } from '@/components/ui/button';
@@ -43,6 +49,10 @@ export function SearchModal({ isOpen, onOpenChange }: SearchModalProps) {
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-0 gap-0 border-none bg-background/95 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden">
         <DialogHeader className="p-4 border-b">
+          <DialogTitle className="sr-only">Search Products</DialogTitle>
+          <DialogDescription className="sr-only">
+            Search for sarees, kurtas, and handcrafted luxury jewellery in our collection.
+          </DialogDescription>
           <div className="relative flex items-center">
             <Search className="absolute left-3 h-5 w-5 text-muted-foreground" />
             <Input
