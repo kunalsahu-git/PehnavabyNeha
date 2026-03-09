@@ -3,7 +3,7 @@
 import { use, useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, SlidersHorizontal, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, ChevronLeft, ChevronRight, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ALL_PRODUCTS, CATEGORIES, CategoryMeta } from "@/lib/store-data";
@@ -17,8 +17,14 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ITEMS_PER_PAGE = 8;
+
+const AVAILABLE_COLORS = ["Red", "Gold", "Pink", "Green", "White", "Ivory", "Blue", "Black", "Yellow", "Multi"];
+const AVAILABLE_SIZES = ["XS", "S", "M", "L", "XL", "Free Size"];
+const AVAILABLE_FABRICS = ["Silk", "Cotton", "Chiffon", "Georgette", "Velvet", "Rayon", "Kundan"];
 
 export default function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
@@ -26,6 +32,9 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
   const [sortBy, setSortBy] = useState("featured");
   const [currentPage, setCurrentPage] = useState(1);
   const [priceRange, setPriceRange] = useState([0, 15000]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedFabrics, setSelectedFabrics] = useState<string[]>([]);
 
   useEffect(() => {
     const cat = CATEGORIES.find(c => c.slug === slug);
@@ -48,6 +57,21 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
     // Filter by Price
     baseProducts = baseProducts.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
 
+    // Filter by Color
+    if (selectedColors.length > 0) {
+      baseProducts = baseProducts.filter(p => p.colors?.some(c => selectedColors.includes(c)));
+    }
+
+    // Filter by Size
+    if (selectedSizes.length > 0) {
+      baseProducts = baseProducts.filter(p => p.sizes?.some(s => selectedSizes.includes(s)));
+    }
+
+    // Filter by Fabric
+    if (selectedFabrics.length > 0) {
+      baseProducts = baseProducts.filter(p => p.fabric && selectedFabrics.includes(p.fabric));
+    }
+
     // Sort Logic
     return [...baseProducts].sort((a, b) => {
       switch (sortBy) {
@@ -63,13 +87,29 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
         default: return 0;
       }
     });
-  }, [slug, sortBy, priceRange]);
+  }, [slug, sortBy, priceRange, selectedColors, selectedSizes, selectedFabrics]);
 
   const totalPages = Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredAndSortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const resetFilters = () => {
+    setPriceRange([0, 15000]);
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setSelectedFabrics([]);
+  };
+
+  const toggleFilter = (list: string[], setList: (v: string[]) => void, item: string) => {
+    if (list.includes(item)) {
+      setList(list.filter(i => i !== item));
+    } else {
+      setList([...list, item]);
+    }
+    setCurrentPage(1);
+  };
 
   if (!category) {
     return (
@@ -125,56 +165,112 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                   <SlidersHorizontal className="h-3 w-3" /> Filters
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                <SheetHeader className="pb-6 border-b">
+              <SheetContent side="left" className="w-[300px] sm:w-[400px] flex flex-col p-0">
+                <SheetHeader className="p-6 border-b">
                   <SheetTitle className="text-lg font-headline uppercase tracking-widest text-primary">Filters</SheetTitle>
                 </SheetHeader>
-                <div className="py-8 space-y-10">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider">Price Range</h3>
-                      <span className="text-[10px] font-bold text-primary px-2 py-1 bg-primary/5 rounded">
-                        ₹{priceRange[0]} - ₹{priceRange[1]}
-                      </span>
+                
+                <ScrollArea className="flex-1 px-6">
+                  <div className="py-8 space-y-10">
+                    {/* Price Filter */}
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider">Price Range</h3>
+                        <span className="text-[10px] font-bold text-primary px-2 py-1 bg-primary/5 rounded">
+                          ₹{priceRange[0]} - ₹{priceRange[1]}
+                        </span>
+                      </div>
+                      <div className="px-2">
+                        <Slider
+                          defaultValue={[0, 15000]}
+                          max={15000}
+                          step={500}
+                          value={priceRange}
+                          onValueChange={setPriceRange}
+                          className="py-4"
+                        />
+                        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mt-2">
+                          <span>₹0</span>
+                          <span>₹15000+</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="px-2">
-                      <Slider
-                        defaultValue={[0, 15000]}
-                        max={15000}
-                        step={500}
-                        value={priceRange}
-                        onValueChange={setPriceRange}
-                        className="py-4"
-                      />
-                      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mt-2">
-                        <span>₹0</span>
-                        <span>₹15000+</span>
+
+                    {/* Color Filter */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider">Color</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {AVAILABLE_COLORS.map(color => (
+                          <button
+                            key={color}
+                            onClick={() => toggleFilter(selectedColors, setSelectedColors, color)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all uppercase tracking-tighter",
+                              selectedColors.includes(color) 
+                                ? "bg-primary text-white border-primary" 
+                                : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                            )}
+                          >
+                            {color}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Size Filter */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider">Size</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {AVAILABLE_SIZES.map(size => (
+                          <button
+                            key={size}
+                            onClick={() => toggleFilter(selectedSizes, setSelectedSizes, size)}
+                            className={cn(
+                              "w-10 h-10 rounded-md text-[10px] font-bold border transition-all uppercase flex items-center justify-center",
+                              selectedSizes.includes(size) 
+                                ? "bg-primary text-white border-primary shadow-sm" 
+                                : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                            )}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Fabric Filter */}
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider">Fabric</h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        {AVAILABLE_FABRICS.map(fabric => (
+                          <label 
+                            key={fabric}
+                            className="flex items-center gap-3 text-sm cursor-pointer group"
+                            onClick={() => toggleFilter(selectedFabrics, setSelectedFabrics, fabric)}
+                          >
+                            <Checkbox 
+                              checked={selectedFabrics.includes(fabric)} 
+                              onCheckedChange={() => {}}
+                            />
+                            <span className={cn(
+                              "text-xs transition-colors",
+                              selectedFabrics.includes(fabric) ? "text-primary font-bold" : "text-muted-foreground"
+                            )}>
+                              {fabric}
+                            </span>
+                          </label>
+                        ))}
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-wider">Availability</h3>
-                    <div className="flex flex-col gap-3">
-                      <label className="flex items-center gap-3 text-sm cursor-pointer hover:text-primary transition-colors group">
-                        <div className="h-4 w-4 rounded border border-primary flex items-center justify-center group-hover:bg-primary/5">
-                           <div className="h-2 w-2 bg-primary rounded-sm" />
-                        </div>
-                        <span>In Stock</span>
-                      </label>
-                      <label className="flex items-center gap-3 text-sm cursor-not-allowed opacity-40">
-                        <div className="h-4 w-4 rounded border border-muted" />
-                        <span>Out of Stock</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute bottom-8 left-6 right-6 flex flex-col gap-3">
+                </ScrollArea>
+
+                <div className="p-6 border-t bg-background mt-auto space-y-3">
                    <Button className="w-full rounded-full h-12 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg">Apply Filters</Button>
                    <Button 
                     variant="ghost" 
                     className="w-full rounded-full font-bold uppercase text-[10px] tracking-[0.2em] text-muted-foreground hover:text-primary"
-                    onClick={() => setPriceRange([0, 15000])}
+                    onClick={resetFilters}
                    >
                      Reset All
                    </Button>
@@ -206,9 +302,12 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
       {/* Grid */}
       <section className="container mx-auto px-4 py-12">
         {paginatedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <p className="text-muted-foreground font-medium text-sm">No products found for this price range.</p>
-            <Button onClick={() => setPriceRange([0, 15000])} variant="link" className="text-primary font-bold uppercase text-xs tracking-widest">
+          <div className="flex flex-col items-center justify-center py-24 space-y-4 text-center">
+            <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <SlidersHorizontal className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground font-medium text-sm">No products found matching your active filters.</p>
+            <Button onClick={resetFilters} variant="link" className="text-primary font-bold uppercase text-xs tracking-widest">
               Clear All Filters
             </Button>
           </div>

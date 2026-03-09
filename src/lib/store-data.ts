@@ -12,14 +12,17 @@ export type Product = {
   isNew?: boolean;
   isSale?: boolean;
   isBestseller?: boolean;
-  createdAt: string; // Added for sorting
+  createdAt: string; 
+  colors?: string[];
+  sizes?: string[];
+  fabric?: string;
 };
 
 export type CategoryMeta = {
   name: string;
   slug: string;
   description: string;
-  longDescription?: string; // Added for SEO/Detailed section
+  longDescription?: string;
   bannerImage: string;
   bannerHint: string;
 };
@@ -80,16 +83,16 @@ export const CATEGORIES: CategoryMeta[] = [
 ];
 
 export const ALL_PRODUCTS: Product[] = [
-  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', categorySlug: 'sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isNew: true, createdAt: '2024-01-01' },
-  { id: '2', slug: 'gold-motif-kurta', name: 'Gold Floral Motif Kurta Set', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 3499, originalPrice: 4499, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-05' },
-  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true, createdAt: '2023-12-15' },
-  { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', categorySlug: 'western-fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true, createdAt: '2024-02-10' },
-  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', categorySlug: 'accessories', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isNew: true, createdAt: '2024-02-15' },
-  { id: '6', slug: 'ivory-anarkali', name: 'Ivory Hand-painted Anarkali', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 5499, image: PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-20' },
-  { id: '7', slug: 'midnight-silk-gown', name: 'Midnight Blue Silk Fusion Gown', category: 'Fusion', categorySlug: 'western-fusion', price: 4299, image: PlaceHolderImages.find(i => i.id === 'hero-2')?.imageUrl || '', isNew: true, createdAt: '2024-02-01' },
-  { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', categorySlug: 'accessories', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true, createdAt: '2023-11-20' },
-  { id: '9', slug: 'ruby-earrings', name: 'Royal Ruby Drop Earrings', category: 'Jewellery', categorySlug: 'accessories', price: 1899, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isNew: true, createdAt: '2024-02-20' },
-  { id: '10', slug: 'white-chiffon-saree', name: 'White Cloud Chiffon Saree', category: 'Sarees', categorySlug: 'sarees', price: 3299, originalPrice: 3999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', createdAt: '2024-01-10' },
-  { id: '11', slug: 'black-velvet-suit', name: 'Black Velvet Embroidery Suit', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 6599, originalPrice: 7999, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-25' },
-  { id: '12', slug: 'floral-maxi-dress', name: 'Floral Garden Maxi Dress', category: 'Fusion', categorySlug: 'western-fusion', price: 2199, image: PlaceHolderImages.find(i => i.id === 'cat-western')?.imageUrl || '', createdAt: '2024-02-22' },
+  { id: '1', slug: 'crimson-silk-saree', name: 'Crimson Embroidered Silk Saree', category: 'Sarees', categorySlug: 'sarees', price: 4999, originalPrice: 6999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', isNew: true, createdAt: '2024-01-01', colors: ['Red'], sizes: ['Free Size'], fabric: 'Silk' },
+  { id: '2', slug: 'gold-motif-kurta', name: 'Gold Floral Motif Kurta Set', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 3499, originalPrice: 4499, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-05', colors: ['Gold', 'Yellow'], sizes: ['S', 'M', 'L'], fabric: 'Cotton' },
+  { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true, createdAt: '2023-12-15', colors: ['Pink'], sizes: ['M', 'L', 'XL'], fabric: 'Silk' },
+  { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', categorySlug: 'western-fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true, createdAt: '2024-02-10', colors: ['Green'], sizes: ['XS', 'S', 'M'], fabric: 'Chiffon' },
+  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', categorySlug: 'accessories', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isNew: true, createdAt: '2024-02-15', colors: ['White', 'Pearl'], fabric: 'Mixed Media' },
+  { id: '6', slug: 'ivory-anarkali', name: 'Ivory Hand-painted Anarkali', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 5499, image: PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-20', colors: ['Ivory', 'White'], sizes: ['S', 'M', 'L', 'XL'], fabric: 'Georgette' },
+  { id: '7', slug: 'midnight-silk-gown', name: 'Midnight Blue Silk Fusion Gown', category: 'Fusion', categorySlug: 'western-fusion', price: 4299, image: PlaceHolderImages.find(i => i.id === 'hero-2')?.imageUrl || '', isNew: true, createdAt: '2024-02-01', colors: ['Blue'], sizes: ['M', 'L'], fabric: 'Silk' },
+  { id: '8', slug: 'kundan-jhumkas', name: 'Premium Kundan Pearl Jhumkas', category: 'Jewellery', categorySlug: 'accessories', price: 1299, originalPrice: 1999, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isSale: true, createdAt: '2023-11-20', colors: ['Gold', 'White'], fabric: 'Kundan' },
+  { id: '9', slug: 'ruby-earrings', name: 'Royal Ruby Drop Earrings', category: 'Jewellery', categorySlug: 'accessories', price: 1899, image: PlaceHolderImages.find(i => i.id === 'hero-3')?.imageUrl || '', isNew: true, createdAt: '2024-02-20', colors: ['Red'], fabric: 'Gemstone' },
+  { id: '10', slug: 'white-chiffon-saree', name: 'White Cloud Chiffon Saree', category: 'Sarees', categorySlug: 'sarees', price: 3299, originalPrice: 3999, image: PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '', createdAt: '2024-01-10', colors: ['White'], sizes: ['Free Size'], fabric: 'Chiffon' },
+  { id: '11', slug: 'black-velvet-suit', name: 'Black Velvet Embroidery Suit', category: 'Ethnic Sets', categorySlug: 'ethnic-wear', price: 6599, originalPrice: 7999, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true, createdAt: '2024-01-25', colors: ['Black'], sizes: ['M', 'L', 'XL'], fabric: 'Velvet' },
+  { id: '12', slug: 'floral-maxi-dress', name: 'Floral Garden Maxi Dress', category: 'Fusion', categorySlug: 'western-fusion', price: 2199, image: PlaceHolderImages.find(i => i.id === 'cat-western')?.imageUrl || '', createdAt: '2024-02-22', colors: ['Multi', 'Floral'], sizes: ['S', 'M', 'L'], fabric: 'Rayon' },
 ];
