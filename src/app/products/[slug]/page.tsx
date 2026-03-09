@@ -96,10 +96,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       </div>
 
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+        {/* Adjusted grid for smaller image: lg:grid-cols-2 (6/6 balance) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 max-w-6xl mx-auto">
           
-          {/* Left: Image Gallery (Span 7) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Left: Image Gallery */}
+          <div className="space-y-4">
             <div className="flex flex-col-reverse md:flex-row gap-4">
               {/* Thumbnails */}
               <div className="flex md:flex-col gap-3 md:w-20 overflow-x-auto md:overflow-y-auto no-scrollbar">
@@ -117,16 +118,18 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 ))}
               </div>
               
-              {/* Main Image */}
-              <div className="relative flex-1 aspect-square bg-secondary/20 rounded-xl overflow-hidden shadow-sm group">
-                <Image
-                  src={images[activeImageIndex]}
-                  alt={product.name}
-                  fill
-                  className="object-cover transition-transform duration-700"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 60vw"
-                />
+              {/* Main Image with Hover Zoom */}
+              <div className="relative flex-1 aspect-square bg-secondary/20 rounded-xl overflow-hidden shadow-sm group cursor-zoom-in">
+                <div className="h-full w-full overflow-hidden">
+                  <Image
+                    src={images[activeImageIndex]}
+                    alt={product.name}
+                    fill
+                    className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-150 origin-center"
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                  />
+                </div>
                 
                 {/* Floating Tags */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
@@ -137,8 +140,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </div>
           </div>
 
-          {/* Right: Product Info (Span 5) */}
-          <div className="lg:col-span-5 flex flex-col space-y-8 lg:sticky lg:top-24 h-fit">
+          {/* Right: Product Info */}
+          <div className="flex flex-col space-y-8 lg:sticky lg:top-24 h-fit">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Pehnava - She is Special</span>
@@ -230,7 +233,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       onClick={() => setQuantity(q => Math.max(1, q - 1))} 
                       className="h-8 w-8 rounded-full hover:bg-primary/10"
                     >
-                      <Minus className="h-4 w-4" />
+                      <CircleMinus className="h-4 w-4" />
                     </Button>
                     <span className="w-12 text-center font-bold text-base">{quantity}</span>
                     <Button 
@@ -239,7 +242,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       onClick={() => setQuantity(q => q + 1)} 
                       className="h-8 w-8 rounded-full hover:bg-primary/10"
                     >
-                      <Plus className="h-4 w-4" />
+                      <CirclePlus className="h-4 w-4" />
                     </Button>
                   </div>
                   
@@ -341,3 +344,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     </div>
   );
 }
+
+// Fixed icon hallucinations from previous versions if any
+const CircleMinus = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+);
+const CirclePlus = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+);
