@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -24,6 +23,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const STATS = [
   { 
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                 "Your 'Festive Wedding Edit' collection is performing 20% better than last month. Consider featuring more Ivory and Gold pieces on the homepage."
               </p>
             </CardContent>
-          </Card>
+          </div>
         </div>
       </div>
     </div>

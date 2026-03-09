@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -35,8 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 const MOCK_ORDERS = [
   { id: 'PN-82931', customer: 'Anjali Sharma', phone: '+91 98765 43210', date: '2024-01-15', total: 4999, status: 'Shipped', payment: 'Verified' },
