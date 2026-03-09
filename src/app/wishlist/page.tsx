@@ -60,7 +60,7 @@ export default function WishlistPage() {
             {/* Trending Now Section (Empty State) */}
             <div className="pt-24 w-full">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-accent mb-12 text-center">Trending Now</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-8">
                 {recommendations.map((product) => (
                   <ProductCard key={product.id} {...product} />
                 ))}
@@ -69,7 +69,7 @@ export default function WishlistPage() {
           </div>
         ) : (
           <div className="space-y-12">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
               {items.map((product) => (
                 <ProductCard key={product.id} {...product} />
               ))}
