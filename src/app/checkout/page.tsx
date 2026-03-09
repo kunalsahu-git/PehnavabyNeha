@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Upload,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
