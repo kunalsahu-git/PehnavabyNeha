@@ -217,10 +217,10 @@ export default function Home() {
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-widest uppercase">Featured Product</h2>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
-            {/* Gallery Side */}
-            <div className="space-y-4">
-              <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-secondary/20 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 max-w-6xl mx-auto">
+            {/* Gallery Side - Reduced Size Container */}
+            <div className="space-y-4 max-w-md mx-auto lg:mx-0 w-full">
+              <div className="relative aspect-[4/5] rounded-lg overflow-hidden bg-secondary/20 shadow-xl">
                 <Image
                   src={FEATURED_PRODUCT.images[activeImageIndex]}
                   alt={FEATURED_PRODUCT.name}
