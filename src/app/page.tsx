@@ -1,10 +1,14 @@
+'use client';
+
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
   { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageHint || '', href: "/collections/ethnic-wear" },
@@ -27,27 +31,47 @@ const HERO_SLIDES = [
     title: 'Elegance Redefined',
     description: 'Discover curated pieces that celebrate the modern woman\'s heritage.',
     image: PlaceHolderImages.find(i => i.id === 'hero-1'),
+    tag: 'Collection 2024'
   },
   {
     id: 2,
     title: 'The Wedding Edit',
     description: 'Exquisite bridal and occasion wear for your most special moments.',
     image: PlaceHolderImages.find(i => i.id === 'hero-2'),
+    tag: 'Collection 2024'
   },
   {
     id: 3,
     title: 'Luxury in Every Stitch',
     description: 'Timeless designs meet modern craftsmanship in our premium collection.',
     image: PlaceHolderImages.find(i => i.id === 'hero-3'),
+    tag: 'Collection 2024'
   },
 ];
 
 export default function Home() {
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!api) return;
+    setCount(api.scrollSnapList().length);
+    setCurrent(api.selectedScrollSnap());
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+  }, [api]);
+
   return (
     <div className="flex flex-col w-full overflow-hidden">
       {/* Hero Banner Section */}
-      <section className="relative h-[80vh] md:h-[90vh] w-full bg-secondary">
-        <Carousel opts={{ loop: true }} className="h-full w-full">
+      <section className="relative h-[80vh] md:h-[90vh] w-full bg-secondary overflow-hidden">
+        <Carousel 
+          setApi={setApi}
+          opts={{ loop: true }} 
+          className="h-full w-full"
+        >
           <CarouselContent className="h-full ml-0">
             {HERO_SLIDES.map((slide) => (
               <CarouselItem key={slide.id} className="h-full p-0">
@@ -56,16 +80,16 @@ export default function Home() {
                     src={slide.image?.imageUrl || ''}
                     alt={slide.title}
                     fill
-                    className="object-cover brightness-[0.75]"
+                    className="object-cover brightness-[0.6]"
                     priority={slide.id === 1}
                     data-ai-hint={slide.image?.imageHint}
                   />
-                  {/* Enhanced Gradient Overlay for Text Readability */}
-                  <div className="absolute inset-0 bg-black/40" />
+                  {/* Enhanced Premium Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70" />
                   
                   <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-6">
                     <span className="text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                      Collection 2024
+                      {slide.tag}
                     </span>
                     <h1 className="text-5xl md:text-8xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                       {slide.title}
@@ -74,10 +98,10 @@ export default function Home() {
                       {slide.description}
                     </p>
                     <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
-                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto shadow-xl">
+                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all border-none">
                         Shop Now
                       </Button>
-                      <Button size="lg" variant="outline" className="border-white text-white bg-white/10 hover:bg-white hover:text-primary h-14 px-10 text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-xl">
+                      <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-14 px-10 text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-2xl font-bold">
                         View Lookbook
                       </Button>
                     </div>
@@ -86,10 +110,26 @@ export default function Home() {
               </CarouselItem>
             ))}
           </CarouselContent>
-          {/* Enhanced Navigation Buttons */}
+          
+          {/* Side Navigation Buttons */}
           <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-            <CarouselPrevious className="static translate-y-0 h-12 w-12 border-white/40 text-white bg-black/20 hover:bg-black/50 backdrop-blur-md pointer-events-auto" />
-            <CarouselNext className="static translate-y-0 h-12 w-12 border-white/40 text-white bg-black/20 hover:bg-black/50 backdrop-blur-md pointer-events-auto" />
+            <CarouselPrevious className="static translate-y-0 h-12 w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+            <CarouselNext className="static translate-y-0 h-12 w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+          </div>
+
+          {/* Dot Navigation Indicators */}
+          <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-3 z-30">
+            {Array.from({ length: count }).map((_, i) => (
+              <button
+                key={i}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  current === i ? "bg-white w-10 shadow-lg" : "bg-white/30 w-3"
+                )}
+                onClick={() => api?.scrollTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+              />
+            ))}
           </div>
         </Carousel>
       </section>
@@ -111,7 +151,7 @@ export default function Home() {
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                 data-ai-hint={cat.hint}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white font-headline text-2xl font-semibold whitespace-nowrap">
                 {cat.name}
               </div>
