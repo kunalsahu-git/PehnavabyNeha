@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -5,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
+import { AIAssistant } from "@/components/layout/AIAssistant";
 import { RecentPurchasePopup } from "@/components/store/RecentPurchasePopup";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
@@ -38,6 +40,7 @@ export default function RootLayout({
               </main>
               <Footer />
               <WhatsAppFAB />
+              <AIAssistant />
               <RecentPurchasePopup />
               <Toaster />
             </CartProvider>

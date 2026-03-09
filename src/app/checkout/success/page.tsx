@@ -58,7 +58,7 @@ export default function OrderSuccessPage() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
             <Button asChild className="w-full sm:w-auto rounded-full px-10 h-14 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg">
-              <Link href="/account/orders">View Order Status</Link>
+              <Link href="/account/orders">Track Your Order</Link>
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto rounded-full px-10 h-14 font-bold uppercase text-[10px] tracking-[0.2em] border-primary text-primary">
               <Link href="/">Continue Shopping <ArrowRight className="ml-2 h-4 w-4" /></Link>
