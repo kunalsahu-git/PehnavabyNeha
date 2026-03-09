@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { SearchModal } from "@/components/layout/SearchModal";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
 const NAV_LINKS = [
   { name: "Ethnic Wear", href: "/collections/ethnic-wear" },
@@ -27,97 +28,113 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
-        <div className="flex h-20 items-center justify-between">
-          {/* Mobile Menu */}
-          <div className="flex md:hidden">
+        <div className="flex h-16 md:h-24 items-center justify-between gap-4">
+          
+          {/* Mobile Menu Trigger - Visible on small/medium screens */}
+          <div className="flex lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-                <nav className="flex flex-col gap-6 mt-12">
-                  <Link href="/" className="text-xl font-headline font-bold text-primary">Home</Link>
-                  {NAV_LINKS.map((link) => (
-                    <Link
-                      key={link.name}
-                      href={link.href}
-                      className={`text-xl font-medium ${link.color || ""}`}
-                    >
-                      {link.name}
+              <SheetContent side="left" className="w-[85vw] sm:max-w-sm flex flex-col p-0 border-r-0 shadow-2xl">
+                <SheetHeader className="p-6 border-b text-left">
+                  <SheetTitle className="text-2xl font-headline font-bold text-primary tracking-tight">Browse Boutique</SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 overflow-y-auto px-6 py-8 no-scrollbar">
+                  <nav className="flex flex-col space-y-7">
+                    <Link href="/" className="text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-colors">Home</Link>
+                    <Separator className="opacity-50" />
+                    {NAV_LINKS.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        className={`text-xl font-headline font-semibold tracking-wide transition-colors ${link.color || "text-foreground hover:text-primary"}`}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                    <Separator className="opacity-50" />
+                    <Link href="/collections/new-arrivals" className="text-xl font-headline font-semibold text-foreground hover:text-primary">New Arrivals</Link>
+                    <Link href="/wishlist" className="text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center justify-between">
+                      My Wishlist
+                      {wishlistCount > 0 && (
+                        <Badge variant="secondary" className="bg-accent/10 text-accent font-bold px-2 py-0.5">{wishlistCount}</Badge>
+                      )}
                     </Link>
-                  ))}
-                  <Link href="/collections/new-arrivals" className="text-xl font-medium">New Arrivals</Link>
-                  <Link href="/wishlist" className="text-xl font-medium flex items-center justify-between">
-                    Wishlist
-                    {wishlistCount > 0 && (
-                      <Badge variant="secondary" className="ml-2">{wishlistCount}</Badge>
-                    )}
-                  </Link>
-                </nav>
+                    <Link href="/account/login" className="text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center gap-3">
+                      <User className="h-5 w-5 opacity-40" /> Account
+                    </Link>
+                  </nav>
+                </div>
+                <div className="p-8 border-t bg-secondary/10 mt-auto">
+                   <p className="text-[9px] font-bold uppercase tracking-[0.5em] text-center text-muted-foreground/60">Wear Your Story • Pehnava</p>
+                </div>
               </SheetContent>
             </Sheet>
           </div>
 
-          {/* Logo */}
-          <Link href="/" className="flex flex-col items-center group">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl md:text-3xl font-headline font-bold text-primary tracking-tighter">
-                PEHNAVA
-              </span>
-            </div>
-            <span className="text-[10px] md:text-xs font-headline font-medium tracking-[0.2em] text-accent -mt-1 uppercase">
+          {/* Logo - Centered layout for a balanced boutique feel */}
+          <Link href="/" className="flex flex-col items-center group transition-transform active:scale-95 shrink-0">
+            <span className="text-2xl md:text-3xl lg:text-4xl font-headline font-bold text-primary tracking-tighter leading-none group-hover:opacity-80 transition-opacity">
+              PEHNAVA
+            </span>
+            <span className="text-[8px] md:text-[10px] lg:text-[11px] font-headline font-medium tracking-[0.4em] text-accent -mt-0.5 md:-mt-1 uppercase">
               by Neha
             </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center space-x-8">
+          {/* Desktop Nav - Hidden on Mobile/Tablet */}
+          <nav className="hidden lg:flex items-center space-x-10 xl:space-x-12">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${link.color || ""}`}
+                className={`text-[11px] font-bold uppercase tracking-[0.25em] transition-all hover:text-primary hover:-translate-y-0.5 whitespace-nowrap ${link.color || "text-foreground/70"}`}
               >
                 {link.name}
               </Link>
             ))}
           </nav>
 
-          {/* Icons */}
-          <div className="flex items-center space-x-1 sm:space-x-4">
+          {/* Action Icons */}
+          <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
             <Button 
               variant="ghost" 
               size="icon" 
+              className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors"
               onClick={() => setIsSearchOpen(true)}
             >
               <Search className="h-5 w-5" />
             </Button>
-            <Link href="/account/login" className="hidden sm:flex">
-              <Button variant="ghost" size="icon">
+            
+            <Link href="/account/login" className="hidden lg:flex">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
                 <User className="h-5 w-5" />
               </Button>
             </Link>
+
             <Link href="/wishlist" className="hidden sm:flex relative">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors">
                 <Heart className="h-5 w-5" />
                 {wishlistCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px] bg-accent">
+                  <Badge className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center p-0 text-[9px] bg-accent font-bold text-white border-none shadow-sm">
                     {wishlistCount}
                   </Badge>
                 )}
               </Button>
             </Link>
+
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative h-10 w-10 rounded-full hover:bg-secondary/60 transition-colors"
               onClick={() => setIsOpen(true)}
             >
               <ShoppingBag className="h-5 w-5" />
               {itemCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                <Badge className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center p-0 text-[9px] font-bold bg-primary text-white border-none shadow-sm">
                   {itemCount}
                 </Badge>
               )}
