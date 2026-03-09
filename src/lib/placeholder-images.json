@@ -1,3 +1,64 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-1",
+      "description": "Elegant South Asian festive collection banner",
+      "imageUrl": "https://picsum.photos/seed/luxury-wear/1920/1080",
+      "imageHint": "indian ethnic fashion"
+    },
+    {
+      "id": "hero-2",
+      "description": "Modern fusion dress for wedding reception",
+      "imageUrl": "https://picsum.photos/seed/fusion-fashion/1920/1080",
+      "imageHint": "fusion dress"
+    },
+    {
+      "id": "hero-3",
+      "description": "Handcrafted luxury jewelry set",
+      "imageUrl": "https://picsum.photos/seed/jewelry/1920/1080",
+      "imageHint": "ethnic jewelry"
+    },
+    {
+      "id": "cat-ethnic",
+      "description": "Traditional Saree collection",
+      "imageUrl": "https://picsum.photos/seed/saree/800/1000",
+      "imageHint": "silk saree"
+    },
+    {
+      "id": "cat-western",
+      "description": "Modern western fusion dresses",
+      "imageUrl": "https://picsum.photos/seed/modern-dress/800/1000",
+      "imageHint": "bohemian dress"
+    },
+    {
+      "id": "cat-accessories",
+      "description": "Luxury accessories and bags",
+      "imageUrl": "https://picsum.photos/seed/accessory/800/1000",
+      "imageHint": "embroidered bag"
+    },
+    {
+      "id": "product-1",
+      "description": "Crimson Embroidered Silk Saree",
+      "imageUrl": "https://picsum.photos/seed/crimson-saree/600/800",
+      "imageHint": "red saree"
+    },
+    {
+      "id": "product-2",
+      "description": "Gold Floral Motif Kurta Set",
+      "imageUrl": "https://picsum.photos/seed/gold-kurta/600/800",
+      "imageHint": "yellow kurta"
+    },
+    {
+      "id": "product-3",
+      "description": "Pastel Pink Lehanga with Zari Work",
+      "imageUrl": "https://picsum.photos/seed/pink-lehanga/600/800",
+      "imageHint": "lehanga choli"
+    },
+    {
+      "id": "product-4",
+      "description": "Emerald Green Fusion Jumpsuit",
+      "imageUrl": "https://picsum.photos/seed/green-fusion/600/800",
+      "imageHint": "modern ethnic"
+    }
+  ]
 }
