@@ -65,8 +65,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col w-full overflow-hidden">
-      {/* Hero Banner Section */}
-      <section className="relative h-[80vh] md:h-[90vh] w-full bg-secondary overflow-hidden">
+      {/* Hero Banner Section - Reduced height to approx half-screen */}
+      <section className="relative h-[50vh] md:h-[60vh] w-full bg-secondary overflow-hidden">
         <Carousel 
           setApi={setApi}
           opts={{ loop: true }} 
@@ -87,21 +87,21 @@ export default function Home() {
                   {/* Premium Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
                   
-                  <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-6">
-                    <span className="text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                  <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-4 md:space-y-6">
+                    <span className="text-xs md:text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
                       {slide.tag}
                     </span>
-                    <h1 className="text-5xl md:text-8xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                    <h1 className="text-4xl md:text-7xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                       {slide.title}
                     </h1>
-                    <p className="text-lg md:text-2xl font-light max-w-2xl mx-auto opacity-95 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-500">
+                    <p className="text-base md:text-xl font-light max-w-2xl mx-auto opacity-95 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-500 line-clamp-2 md:line-clamp-none">
                       {slide.description}
                     </p>
-                    <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
-                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-10 text-lg rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all border-none">
+                    <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
+                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 md:h-14 px-8 md:px-10 text-base md:text-lg rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all border-none">
                         Shop Now
                       </Button>
-                      <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-14 px-10 text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-2xl font-bold">
+                      <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-12 md:h-14 px-8 md:px-10 text-base md:text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-2xl font-bold">
                         View Lookbook
                       </Button>
                     </div>
@@ -113,18 +113,18 @@ export default function Home() {
           
           {/* Side Navigation Buttons */}
           <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-            <CarouselPrevious className="static translate-y-0 h-12 w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
-            <CarouselNext className="static translate-y-0 h-12 w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+            <CarouselPrevious className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+            <CarouselNext className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
           </div>
 
           {/* Dot Navigation Indicators */}
-          <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-3 z-30">
+          <div className="absolute bottom-6 md:bottom-10 left-0 right-0 flex justify-center gap-3 z-30">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
-                  current === i ? "bg-white w-10 shadow-lg" : "bg-white/30 w-3"
+                  current === i ? "bg-white w-8 md:w-10 shadow-lg" : "bg-white/30 w-3"
                 )}
                 onClick={() => api?.scrollTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
