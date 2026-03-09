@@ -80,12 +80,12 @@ export default function Home() {
                     src={slide.image?.imageUrl || ''}
                     alt={slide.title}
                     fill
-                    className="object-cover brightness-[0.6]"
+                    className="object-cover brightness-[0.65]"
                     priority={slide.id === 1}
                     data-ai-hint={slide.image?.imageHint}
                   />
-                  {/* Enhanced Premium Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70" />
+                  {/* Premium Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
                   
                   <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-6">
                     <span className="text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
