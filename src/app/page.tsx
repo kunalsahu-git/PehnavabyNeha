@@ -187,7 +187,7 @@ export default function Home() {
             <CarouselNext className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
           </div>
 
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-30">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
@@ -404,13 +404,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Studio Stories Section (Instagram Reel Style) */}
+      {/* Studio Stories Section - NOW THE SECOND TO LAST SECTION */}
       <section className="bg-white py-16 md:py-24 border-b overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-4">
             <div className="text-center md:text-left space-y-2">
               <div className="flex items-center justify-center md:justify-start gap-3 text-primary">
-                <Instagram className="h-5 w-5" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Follow @PehnavaByNeha</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-headline font-bold uppercase">Studio Stories</h2>
