@@ -90,16 +90,16 @@ export function ProductCard({
         </Button>
       </Link>
 
-      <div className="flex flex-col space-y-2 px-1 flex-1">
-        <div className="space-y-1">
+      <div className="flex flex-col space-y-3 px-1 flex-1">
+        <div className="space-y-1.5">
           <span className="text-[10px] uppercase tracking-[0.2em] text-accent font-bold">
             {category}
           </span>
-          <Link href={`/products/${slug}`} className="text-sm font-medium hover:text-primary transition-colors line-clamp-1 font-headline">
+          <Link href={`/products/${slug}`} className="text-base font-medium hover:text-primary transition-colors line-clamp-1 font-headline">
             {name}
           </Link>
           <div className="flex items-center space-x-2">
-            <span className="text-base font-bold text-primary">₹{price.toLocaleString()}</span>
+            <span className="text-lg font-bold text-primary">₹{price.toLocaleString()}</span>
             {originalPrice && (
               <>
                 <span className="text-xs text-muted-foreground line-through">₹{originalPrice.toLocaleString()}</span>
@@ -109,12 +109,12 @@ export function ProductCard({
           </div>
         </div>
 
-        {/* Add to Bag Button - Always Visible */}
+        {/* Add to Bag Button - Corrected for accessibility (always visible) */}
         <Button 
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm h-10 rounded-full font-bold text-xs mt-auto group/btn"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg h-11 rounded-full font-bold text-xs mt-auto group/btn transition-all active:scale-95"
           onClick={handleAddToCart}
         >
-          <ShoppingBag className="h-3.5 w-3.5 mr-2 group-hover/btn:scale-110 transition-transform" />
+          <ShoppingBag className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
           Add to Bag
         </Button>
       </div>

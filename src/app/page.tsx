@@ -58,7 +58,11 @@ export default function Home() {
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
 
-  const autoplayPlugin = useRef(
+  const autoplayHero = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: false })
+  );
+
+  const autoplayArrivals = useRef(
     Autoplay({ delay: 3500, stopOnInteraction: false })
   );
 
@@ -73,11 +77,12 @@ export default function Home() {
 
   return (
     <div className="flex flex-col w-full overflow-hidden">
-      {/* Hero Banner Section */}
-      <section className="relative h-[50vh] md:h-[60vh] w-full bg-secondary overflow-hidden">
+      {/* Hero Banner Section - Reduced height to half screen */}
+      <section className="relative h-[45vh] md:h-[50vh] w-full bg-secondary overflow-hidden">
         <Carousel 
           setApi={setApi}
           opts={{ loop: true }} 
+          plugins={[autoplayHero.current]}
           className="h-full w-full"
         >
           <CarouselContent className="h-full ml-0">
@@ -94,21 +99,21 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
                   
-                  <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-4 md:space-y-6">
-                    <span className="text-xs md:text-sm font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                  <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-3 md:space-y-4">
+                    <span className="text-xs font-bold tracking-[0.4em] uppercase opacity-90 animate-in fade-in slide-in-from-bottom-2 duration-700">
                       {slide.tag}
                     </span>
-                    <h1 className="text-4xl md:text-7xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                    <h1 className="text-3xl md:text-6xl font-headline font-bold leading-tight animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
                       {slide.title}
                     </h1>
-                    <p className="text-base md:text-xl font-light max-w-2xl mx-auto opacity-95 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-500 line-clamp-2 md:line-clamp-none">
+                    <p className="text-sm md:text-lg font-light max-w-xl mx-auto opacity-95 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-400 line-clamp-2">
                       {slide.description}
                     </p>
-                    <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-700">
-                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-12 md:h-14 px-8 md:px-10 text-base md:text-lg rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all border-none">
+                    <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
+                      <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-12 px-8 rounded-full font-bold w-full sm:w-auto shadow-xl">
                         Shop Now
                       </Button>
-                      <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-12 md:h-14 px-8 md:px-10 text-base md:text-lg rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-2xl font-bold">
+                      <Button size="lg" variant="outline" className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-11 md:h-12 px-8 rounded-full w-full sm:w-auto backdrop-blur-sm transition-all shadow-xl font-bold">
                         View Lookbook
                       </Button>
                     </div>
@@ -119,17 +124,18 @@ export default function Home() {
           </CarouselContent>
           
           <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-            <CarouselPrevious className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
-            <CarouselNext className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+            <CarouselPrevious className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+            <CarouselNext className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
           </div>
 
-          <div className="absolute bottom-6 md:bottom-10 left-0 right-0 flex justify-center gap-3 z-30">
+          {/* Dots Navigation */}
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
             {Array.from({ length: count }).map((_, i) => (
               <button
                 key={i}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
-                  current === i ? "bg-white w-8 md:w-10 shadow-lg" : "bg-white/30 w-3"
+                  current === i ? "bg-white w-8 shadow-lg" : "bg-white/30 w-1.5"
                 )}
                 onClick={() => api?.scrollTo(i)}
                 aria-label={`Go to slide ${i + 1}`}
@@ -165,7 +171,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Arrivals Section - Carousel Implementation */}
+      {/* New Arrivals Section - 360 Degree Infinite Auto Carousel */}
       <section className="bg-secondary/30 py-16 md:py-24 overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-end justify-between mb-12">
@@ -183,7 +189,7 @@ export default function Home() {
               align: "start",
               loop: true,
             }}
-            plugins={[autoplayPlugin.current]}
+            plugins={[autoplayArrivals.current]}
             className="w-full"
           >
             <CarouselContent className="-ml-4 md:-ml-6">
@@ -194,9 +200,9 @@ export default function Home() {
               ))}
             </CarouselContent>
             
-            <div className="flex justify-center md:justify-end gap-4 mt-8">
-              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all" />
-              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all" />
+            <div className="flex justify-center md:justify-end gap-4 mt-10">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all shadow-md" />
             </div>
           </Carousel>
 
@@ -208,7 +214,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Shop the Look / Editorial */}
+      {/* Shop the Look / Editorial - Refined Buttons */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="flex flex-col items-center text-center mb-16 space-y-3">
           <span className="text-primary font-bold uppercase tracking-widest text-sm">Editorial</span>
@@ -217,7 +223,7 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="group relative aspect-[3/4] overflow-hidden rounded-2xl cursor-pointer">
+            <div key={i} className="group relative aspect-[3/4] overflow-hidden rounded-2xl cursor-pointer shadow-lg hover:shadow-2xl transition-shadow duration-500">
               <Image
                 src={PlaceHolderImages[i + 4].imageUrl}
                 alt="Shop the look"
@@ -225,10 +231,13 @@ export default function Home() {
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
                 data-ai-hint={PlaceHolderImages[i + 4].imageHint}
               />
-              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                <h3 className="text-3xl font-headline font-bold mb-4">Midnight Soiree</h3>
-                <Button variant="outline" className="border-white text-white hover:bg-white hover:text-primary rounded-full px-8">
+              {/* Permanent elegant overlay with visible buttons */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end p-8 text-white space-y-4">
+                <h3 className="text-2xl md:text-3xl font-headline font-bold tracking-tight">Midnight Soiree</h3>
+                <Button 
+                  className="bg-white text-primary hover:bg-primary hover:text-white rounded-full px-8 font-bold transition-all transform group-hover:scale-105 shadow-lg border-none"
+                >
                   Shop Outfit
                 </Button>
               </div>
