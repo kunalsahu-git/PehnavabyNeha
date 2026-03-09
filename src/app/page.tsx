@@ -1,14 +1,16 @@
+
 'use client';
 
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
+import Autoplay from "embla-carousel-autoplay";
 
 const CATEGORIES = [
   { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageHint || '', href: "/collections/ethnic-wear" },
@@ -23,6 +25,8 @@ const NEW_ARRIVALS = [
   { id: '2', slug: 'gold-motif-kurta', name: 'Gold Floral Motif Kurta Set', category: 'Ethnic Sets', price: 3499, originalPrice: 4499, image: PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '', isBestseller: true },
   { id: '3', slug: 'pastel-pink-lehanga', name: 'Pastel Pink Zari Lehanga', category: 'Ethnic Sets', price: 8999, originalPrice: 12999, image: PlaceHolderImages.find(i => i.id === 'product-3')?.imageUrl || '', isSale: true },
   { id: '4', slug: 'emerald-fusion-jumpsuit', name: 'Emerald Green Fusion Jumpsuit', category: 'Fusion', price: 2999, image: PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '', isNew: true },
+  { id: '5', slug: 'pearl-choker-set', name: 'Pearl & Stone Choker Set', category: 'Jewellery', price: 1599, originalPrice: 2299, image: PlaceHolderImages.find(i => i.id === 'cat-accessories')?.imageUrl || '', isNew: true },
+  { id: '6', slug: 'ivory-anarkali', name: 'Ivory Hand-painted Anarkali', category: 'Ethnic Sets', price: 5499, image: PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '', isBestseller: true },
 ];
 
 const HERO_SLIDES = [
@@ -54,6 +58,10 @@ export default function Home() {
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
 
+  const autoplayPlugin = useRef(
+    Autoplay({ delay: 3500, stopOnInteraction: false })
+  );
+
   useEffect(() => {
     if (!api) return;
     setCount(api.scrollSnapList().length);
@@ -65,7 +73,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col w-full overflow-hidden">
-      {/* Hero Banner Section - Reduced height to approx half-screen */}
+      {/* Hero Banner Section */}
       <section className="relative h-[50vh] md:h-[60vh] w-full bg-secondary overflow-hidden">
         <Carousel 
           setApi={setApi}
@@ -84,7 +92,6 @@ export default function Home() {
                     priority={slide.id === 1}
                     data-ai-hint={slide.image?.imageHint}
                   />
-                  {/* Premium Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
                   
                   <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-4 md:space-y-6">
@@ -111,13 +118,11 @@ export default function Home() {
             ))}
           </CarouselContent>
           
-          {/* Side Navigation Buttons */}
           <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
             <CarouselPrevious className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
             <CarouselNext className="static translate-y-0 h-10 w-10 md:h-12 md:w-12 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
           </div>
 
-          {/* Dot Navigation Indicators */}
           <div className="absolute bottom-6 md:bottom-10 left-0 right-0 flex justify-center gap-3 z-30">
             {Array.from({ length: count }).map((_, i) => (
               <button
@@ -160,8 +165,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Arrivals Section */}
-      <section className="bg-secondary/30 py-16 md:py-24">
+      {/* New Arrivals Section - Carousel Implementation */}
+      <section className="bg-secondary/30 py-16 md:py-24 overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-end justify-between mb-12">
             <div className="space-y-2">
@@ -172,13 +177,31 @@ export default function Home() {
               View All <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
-            {NEW_ARRIVALS.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </div>
+          
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[autoplayPlugin.current]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4 md:-ml-6">
+              {NEW_ARRIVALS.map((product) => (
+                <CarouselItem key={product.id} className="pl-4 md:pl-6 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <ProductCard {...product} />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            
+            <div className="flex justify-center md:justify-end gap-4 mt-8">
+              <CarouselPrevious className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all" />
+              <CarouselNext className="static translate-y-0 h-12 w-12 rounded-full border-2 border-primary/20 hover:bg-primary hover:text-white transition-all" />
+            </div>
+          </Carousel>
+
           <div className="mt-12 flex md:hidden justify-center">
-             <Button variant="outline" asChild className="rounded-full px-8">
+             <Button variant="outline" asChild className="rounded-full px-8 border-primary text-primary font-bold">
                <Link href="/collections/new-arrivals">View All Products</Link>
              </Button>
           </div>
