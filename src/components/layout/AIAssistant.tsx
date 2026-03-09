@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -18,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { whatsappCustomerAssistant } from '@/ai/flows/whatsapp-customer-assistant';
 import { useUser } from '@/firebase';
+import { cn } from '@/lib/utils';
 
 type Message = {
   role: 'user' | 'assistant';
