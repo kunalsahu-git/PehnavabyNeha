@@ -1,4 +1,3 @@
-
 "use client";
 
 import { MessageCircle, Instagram, MessageSquare } from "lucide-react";
@@ -19,7 +18,7 @@ export function WhatsAppFAB() {
 
   return (
     <div 
-      className="fixed bottom-6 right-6 z-[60] flex flex-col items-center gap-3"
+      className="fixed bottom-20 right-6 z-[60] flex flex-col items-center gap-3"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

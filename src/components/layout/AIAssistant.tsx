@@ -67,8 +67,8 @@ export function AIAssistant() {
 
   return (
     <>
-      {/* Floating Trigger */}
-      <div className="fixed bottom-24 right-6 z-[60]">
+      {/* Floating Trigger - Moved to bottom-6 to be below the social FAB */}
+      <div className="fixed bottom-6 right-6 z-[60]">
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -82,14 +82,14 @@ export function AIAssistant() {
         </motion.div>
       </div>
 
-      {/* Chat Window */}
+      {/* Chat Window - Positioned above the tier of FABs */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-40 right-6 z-[60] w-[320px] sm:w-[380px] h-[500px] bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden flex flex-col"
+            className="fixed bottom-20 right-6 z-[60] w-[320px] sm:w-[380px] h-[500px] bg-white rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="bg-primary p-6 text-white flex items-center justify-between shrink-0">
