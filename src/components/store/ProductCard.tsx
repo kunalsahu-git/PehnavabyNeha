@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { cn } from "@/lib/utils";
 
 type ProductCardProps = {
@@ -39,6 +39,9 @@ export function ProductCard({
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { addItem } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
+
+  const isFavorited = isInWishlist(id);
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -55,6 +58,26 @@ export function ProductCard({
       quantity: 1,
       size: 'M'
     });
+  };
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Reconstruct the product object for the context
+    toggleWishlist({
+      id,
+      slug,
+      name,
+      category,
+      categorySlug: '', // Context doesn't strictly need this for basic list
+      price,
+      originalPrice,
+      image,
+      isNew,
+      isSale,
+      isBestseller,
+      createdAt: new Date().toISOString()
+    } as any);
   };
 
   return (
@@ -83,10 +106,14 @@ export function ProductCard({
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-3 right-3 h-9 w-9 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/60 backdrop-blur-md hover:bg-white/90 text-primary z-10"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          className={cn(
+            "absolute top-3 right-3 h-9 w-9 rounded-full transition-all duration-300 z-10",
+            "bg-white/60 backdrop-blur-md hover:bg-white/90",
+            isFavorited ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+          )}
+          onClick={handleWishlistToggle}
         >
-          <Heart className="h-4 w-4" />
+          <Heart className={cn("h-4 w-4", isFavorited && "fill-current")} />
         </Button>
       </Link>
 
@@ -109,7 +136,6 @@ export function ProductCard({
           </div>
         </div>
 
-        {/* Add to Bag Button - Corrected for accessibility (always visible) */}
         <Button 
           className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg h-11 rounded-full font-bold text-xs mt-auto group/btn transition-all active:scale-95"
           onClick={handleAddToCart}

@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 
 export const metadata: Metadata = {
   title: 'Pehnava by Neha | Wear Your Story',
@@ -25,16 +26,18 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background selection:bg-primary selection:text-primary-foreground">
-        <CartProvider>
-          <AnnouncementBar />
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-          <WhatsAppFAB />
-          <Toaster />
-        </CartProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <AnnouncementBar />
+            <Header />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Footer />
+            <WhatsAppFAB />
+            <Toaster />
+          </CartProvider>
+        </WishlistProvider>
       </body>
     </html>
   );

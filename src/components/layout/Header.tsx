@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ShoppingBag, Search, Heart, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CartDrawer } from "@/components/cart/CartDrawer";
@@ -20,6 +21,7 @@ const NAV_LINKS = [
 
 export function Header() {
   const { itemCount, setIsOpen } = useCart();
+  const { itemCount: wishlistCount } = useWishlist();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
@@ -47,6 +49,12 @@ export function Header() {
                     </Link>
                   ))}
                   <Link href="/collections/new-arrivals" className="text-xl font-medium">New Arrivals</Link>
+                  <Link href="/wishlist" className="text-xl font-medium flex items-center justify-between">
+                    Wishlist
+                    {wishlistCount > 0 && (
+                      <Badge variant="secondary" className="ml-2">{wishlistCount}</Badge>
+                    )}
+                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -91,9 +99,14 @@ export function Header() {
                 <User className="h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/wishlist" className="hidden sm:flex">
+            <Link href="/wishlist" className="hidden sm:flex relative">
               <Button variant="ghost" size="icon">
                 <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px] bg-accent">
+                    {wishlistCount}
+                  </Badge>
+                )}
               </Button>
             </Link>
             <Button
