@@ -1,0 +1,848 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a customer profile in the Pehnava by Neha platform. Used for authentication and personalization.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The customer's primary phone number, used for login and WhatsApp communication. (Example: +919876543210)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the customer."
+        },
+        "email": {
+          "type": "string",
+          "description": "The customer's email address.",
+          "format": "email"
+        },
+        "birthdayMonth": {
+          "type": "number",
+          "description": "The month of the customer's birthday (1-12)."
+        },
+        "birthdayYear": {
+          "type": "number",
+          "description": "The year of the customer's birthday."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "phone",
+        "name",
+        "createdAt"
+      ]
+    },
+    "OtpCode": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OtpCode",
+      "type": "object",
+      "description": "Stores one-time passcodes sent to users for authentication via WhatsApp.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OtpCode entity."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number to which the OTP was sent, matching a User's phone number."
+        },
+        "code": {
+          "type": "string",
+          "description": "The 6-digit OTP code."
+        },
+        "expiresAt": {
+          "type": "string",
+          "description": "Timestamp when the OTP code expires.",
+          "format": "date-time"
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Indicates whether the OTP code has been successfully used for authentication."
+        }
+      },
+      "required": [
+        "id",
+        "phone",
+        "code",
+        "expiresAt",
+        "used"
+      ]
+    },
+    "Address": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Address",
+      "type": "object",
+      "description": "Represents a saved delivery address for a customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Address entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this address. (Relationship: User 1:N Address)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the recipient for this address."
+        },
+        "line1": {
+          "type": "string",
+          "description": "The first line of the street address."
+        },
+        "line2": {
+          "type": "string",
+          "description": "The second line of the street address, if any."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city of the address."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state or province of the address."
+        },
+        "pincode": {
+          "type": "string",
+          "description": "The postal code or pincode of the address."
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Indicates if this is the user's default delivery address."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "line1",
+        "city",
+        "state",
+        "pincode",
+        "isDefault"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Defines product categories (e.g., 'Ethnic Wear', 'Dresses').",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the category (e.g., 'Sarees')."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A URL-friendly unique identifier for the category (e.g., 'sarees')."
+        },
+        "parentId": {
+          "type": "string",
+          "description": "Reference to a parent category, enabling hierarchical categorization. (Relationship: Category 1:N Category)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to an image representing the category.",
+          "format": "uri"
+        },
+        "displayOrder": {
+          "type": "number",
+          "description": "The order in which the category should be displayed."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "displayOrder"
+      ]
+    },
+    "Collection": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Collection",
+      "type": "object",
+      "description": "Groups products for marketing or thematic purposes (e.g., 'New Arrivals', 'Wedding Collection').",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Collection entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the collection (e.g., 'Festive Collection')."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A URL-friendly unique identifier for the collection (e.g., 'festive-collection')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the collection."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to an image representing the collection.",
+          "format": "uri"
+        },
+        "productIds": {
+          "type": "array",
+          "description": "References to Products included in this collection. (Relationship: Collection N:N Product)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "slug"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a single sellable item available in the boutique.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Product entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the product."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A URL-friendly unique identifier for the product (e.g., 'silk-saree-red')."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the product."
+        },
+        "fabric": {
+          "type": "string",
+          "description": "The fabric material of the product."
+        },
+        "careInstructions": {
+          "type": "string",
+          "description": "Instructions for caring for the product (e.g., 'Dry Clean Only')."
+        },
+        "price": {
+          "type": "number",
+          "description": "The original selling price of the product."
+        },
+        "salePrice": {
+          "type": "number",
+          "description": "The discounted sale price of the product, if applicable."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to the primary Category this product belongs to. (Relationship: Category 1:N Product)"
+        },
+        "stockStatus": {
+          "type": "string",
+          "description": "Current stock availability status of the product.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "published": {
+          "type": "boolean",
+          "description": "Indicates if the product is visible on the storefront."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the product was added to the catalog.",
+          "format": "date-time"
+        },
+        "collectionIds": {
+          "type": "array",
+          "description": "References to Collections this product belongs to. (Relationship: Product N:N Collection)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "description",
+        "price",
+        "categoryId",
+        "stockStatus",
+        "published",
+        "createdAt"
+      ]
+    },
+    "ProductImage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProductImage",
+      "type": "object",
+      "description": "Stores image URLs for a specific product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProductImage entity."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product this image belongs to. (Relationship: Product 1:N ProductImage)"
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL of the product image.",
+          "format": "uri"
+        },
+        "displayOrder": {
+          "type": "number",
+          "description": "The order in which the image should be displayed in the product gallery."
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "url",
+        "displayOrder"
+      ]
+    },
+    "ProductVariant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProductVariant",
+      "type": "object",
+      "description": "Defines specific variations of a product, such as size and color, along with their stock quantity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProductVariant entity."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product this variant belongs to. (Relationship: Product 1:N ProductVariant)"
+        },
+        "size": {
+          "type": "string",
+          "description": "The size of the product variant (e.g., 'M', 'XL')."
+        },
+        "colorName": {
+          "type": "string",
+          "description": "The name of the color of the product variant (e.g., 'Crimson Red')."
+        },
+        "colorHex": {
+          "type": "string",
+          "description": "The hexadecimal color code for the product variant (e.g., '#8B1A3A')."
+        },
+        "stockQty": {
+          "type": "number",
+          "description": "The current quantity of this specific product variant in stock."
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "size",
+        "colorName",
+        "colorHex",
+        "stockQty"
+      ]
+    },
+    "WishlistItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WishlistItem",
+      "type": "object",
+      "description": "Represents a single product added to a user's wishlist.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the WishlistItem entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who added the item to their wishlist. (Relationship: User 1:N WishlistItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product in the wishlist. (Relationship: Product 1:N WishlistItem)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the product was added to the wishlist.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "productId",
+        "createdAt"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a customer's placed order, including details about delivery, payment, and status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Order entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who placed the order. (Relationship: User 1:N Order)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the recipient for the order."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number for delivery contact."
+        },
+        "addressJson": {
+          "type": "string",
+          "description": "A JSON string representation of the delivery address at the time of order placement. This field captures the address details as they were, independently of any changes to a saved Address entity. It is a string to prevent nesting of objects."
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "The sum of prices of all items in the order before delivery charges and discounts."
+        },
+        "deliveryCharge": {
+          "type": "number",
+          "description": "The delivery charge applied to the order."
+        },
+        "total": {
+          "type": "number",
+          "description": "The total amount paid or to be paid for the order, including all charges."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "The current status of the payment for this order (e.g., 'PENDING', 'CONFIRMED').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "orderStatus": {
+          "type": "string",
+          "description": "The current fulfillment status of the order (e.g., 'PACKED', 'SHIPPED').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "paymentScreenshotUrl": {
+          "type": "string",
+          "description": "URL to the screenshot uploaded by the customer as proof of UPI payment.",
+          "format": "uri"
+        },
+        "courierName": {
+          "type": "string",
+          "description": "The name of the courier service used for shipping."
+        },
+        "trackingNumber": {
+          "type": "string",
+          "description": "The tracking number provided by the courier service."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the order was placed.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of the last update to the order status or details.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name",
+        "phone",
+        "addressJson",
+        "subtotal",
+        "deliveryCharge",
+        "total",
+        "paymentStatus",
+        "orderStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OrderItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OrderItem",
+      "type": "object",
+      "description": "Details a specific product included within an order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OrderItem entity."
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Reference to the Order this item belongs to. (Relationship: Order 1:N OrderItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product that was ordered. (Relationship: Product 1:N OrderItem)"
+        },
+        "productName": {
+          "type": "string",
+          "description": "The name of the product at the time of order."
+        },
+        "productImage": {
+          "type": "string",
+          "description": "The URL of the product's main image at the time of order.",
+          "format": "uri"
+        },
+        "size": {
+          "type": "string",
+          "description": "The size of the product ordered."
+        },
+        "color": {
+          "type": "string",
+          "description": "The color of the product ordered."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of a single unit of the product at the time of order."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of this product ordered."
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "productId",
+        "productName",
+        "productImage",
+        "size",
+        "color",
+        "price",
+        "quantity"
+      ]
+    },
+    "HomepageConfig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HomepageConfig",
+      "type": "object",
+      "description": "Stores dynamic configuration data for the website homepage, such as banners and featured products.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "A unique key identifying the homepage configuration item (e.g., 'hero_banners', 'featured_products')."
+        },
+        "valueJson": {
+          "type": "string",
+          "description": "A JSON string representing the configuration value for the given key. This field stores complex data structures as a string to prevent nesting of objects."
+        }
+      },
+      "required": [
+        "key",
+        "valueJson"
+      ]
+    },
+    "Setting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Setting",
+      "type": "object",
+      "description": "Stores global application settings and configuration values.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "A unique key identifying the application setting (e.g., 'upi_id', 'delivery_charge')."
+        },
+        "value": {
+          "type": "string",
+          "description": "The value of the setting."
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual customer profiles. Access is restricted to the authenticated user themselves and administrators.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching request.auth.uid."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/addresses/{addressId}",
+        "definition": {
+          "entityName": "Address",
+          "schema": {
+            "$ref": "#/backend/entities/Address"
+          },
+          "description": "Stores delivery addresses for a specific user. Access is restricted to the owning user and administrators. The userId is implicitly denormalized via the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this address."
+            },
+            {
+              "name": "addressId",
+              "description": "The unique identifier for the address."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/wishlistItems/{wishlistItemId}",
+        "definition": {
+          "entityName": "WishlistItem",
+          "schema": {
+            "$ref": "#/backend/entities/WishlistItem"
+          },
+          "description": "Stores individual products added to a user's wishlist. Access is restricted to the owning user and administrators. The userId is implicitly denormalized via the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this wishlist item."
+            },
+            {
+              "name": "wishlistItemId",
+              "description": "The unique identifier for the wishlist item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores details of a customer's placed order. Access is restricted to the owning user and administrators. The userId is implicitly denormalized via the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who placed this order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/orders/{orderId}/items/{orderItemId}",
+        "definition": {
+          "entityName": "OrderItem",
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
+          "description": "Details a specific product included within an order. Access is restricted to the owning user's order and administrators. The userId is implicitly denormalized via the path, ensuring Authorization Independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who placed the parent order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier of the parent order."
+            },
+            {
+              "name": "orderItemId",
+              "description": "The unique identifier for the order item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/otp_codes/{otpCodeId}",
+        "definition": {
+          "entityName": "OtpCode",
+          "schema": {
+            "$ref": "#/backend/entities/OtpCode"
+          },
+          "description": "Stores temporary one-time passcodes for authentication. Managed by the backend system; not directly accessible by users or regular administrators via client rules.",
+          "params": [
+            {
+              "name": "otpCodeId",
+              "description": "The unique identifier for the OTP code."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Defines product categories. Publicly readable for all users; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/collections/{collectionId}",
+        "definition": {
+          "entityName": "Collection",
+          "schema": {
+            "$ref": "#/backend/entities/Collection"
+          },
+          "description": "Groups products for marketing or thematic purposes. Publicly readable for all users; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "collectionId",
+              "description": "The unique identifier for the collection."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Represents a single sellable item. Publicly readable if 'published' is true; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}/images/{imageId}",
+        "definition": {
+          "entityName": "ProductImage",
+          "schema": {
+            "$ref": "#/backend/entities/ProductImage"
+          },
+          "description": "Stores image URLs for a specific product. Publicly readable; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier of the parent product."
+            },
+            {
+              "name": "imageId",
+              "description": "The unique identifier for the product image."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}/variants/{variantId}",
+        "definition": {
+          "entityName": "ProductVariant",
+          "schema": {
+            "$ref": "#/backend/entities/ProductVariant"
+          },
+          "description": "Defines specific variations of a product. Publicly readable; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier of the parent product."
+            },
+            {
+              "name": "variantId",
+              "description": "The unique identifier for the product variant."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/configs/homepage/{configKey}",
+        "definition": {
+          "entityName": "HomepageConfig",
+          "schema": {
+            "$ref": "#/backend/entities/HomepageConfig"
+          },
+          "description": "Stores dynamic configuration data for the website homepage. Publicly readable for all users; write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "configKey",
+              "description": "A unique key identifying the homepage configuration item (e.g., 'hero_banners')."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/configs/settings/{settingKey}",
+        "definition": {
+          "entityName": "Setting",
+          "schema": {
+            "$ref": "#/backend/entities/Setting"
+          },
+          "description": "Stores global application settings. Certain settings may be publicly readable (e.g., UPI ID); write access is restricted to administrators.",
+          "params": [
+            {
+              "name": "settingKey",
+              "description": "A unique key identifying the application setting (e.g., 'upi_id')."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{adminUid}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "A dedicated collection for storing UIDs of users who have administrator privileges. Used for Database-Backed Access Control (DBAC) where existence of a document signifies an admin role. Read access for rules, write access restricted to super-admins/system.",
+          "params": [
+            {
+              "name": "adminUid",
+              "description": "The unique identifier of a Firebase authenticated user who is an administrator."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, strictly adhering to the core design principles and strategy mandates. The structure leverages hierarchical paths, denormalization for authorization, and structural segregation to simplify security rules and ensure data integrity.\n\n**Authorization Independence (CRITICAL) & Denormalization:**\nAuthorization independence is primarily achieved through the strategic use of hierarchical subcollections for user-owned data. For entities like `Address`, `WishlistItem`, `Order`, and `OrderItem`, we use paths like `/users/{userId}/addresses/{addressId}` and `/users/{userId}/orders/{orderId}/items/{orderItemId}`. In these structures, the `userId` is part of the document's path. This implicitly denormalizes the `userId` for authorization purposes, allowing security rules to directly reference `request.auth.uid` against the `{userId}` wildcard in the path. This eliminates the need for expensive and complex `get()` calls to parent documents to check ownership or membership, thus enabling atomic operations and simplifying rule logic. For example, an `OrderItem`'s access depends on its parent `Order`'s owner (`userId`), but by placing `OrderItem` under `/users/{userId}/orders/{orderId}/items/{orderItemId}`, the `userId` is available directly from the path context in security rules. Publicly accessible collections like `/products` or `/categories` inherently do not have authorization dependencies across documents, further simplifying rules.\n\n**QAPs (Rules are not Filters):**\nThe structure ensures Queryable Access Patterns by segregating data based on its access requirements:\n1.  **Public Collections:** Collections like `/categories`, `/collections`, `/products`, `/homepageConfig`, and `/configs/settings` are designed for broad public `list` and `get` access. Security rules for these will grant public read access (potentially with conditions like `resource.data.published == true` for products), ensuring that `list` queries on these collections return *only* authorized data without requiring client-side filtering or complex server-side checks.\n2.  **User-Owned Subcollections:** For `/users/{userId}/addresses`, `/users/{userId}/wishlistItems`, `/users/{userId}/orders`, and `/users/{userId}/orders/{orderId}/items`, the inherent `/users/{userId}/` prefix means that any `list` operation performed by an authenticated user (`request.auth.uid`) will automatically be scoped to *only* their own data. This naturally enforces authorization at the query level, preventing unauthorized access and adhering to QAPs.\n3.  **Admin Roles (DBAC):** A dedicated top-level collection, `/roles_admin/{adminUid}`, stores administrative roles. Firestore rules can check for the existence of `get(/databases/$(database)/documents/roles_admin/$(request.auth.uid))` to grant administrative privileges. This ensures that admin access is explicitly defined and checked without introducing filtering logic into rules for other collections.\n\n**Structural Segregation & Access Modeling:**\n*   **Private Data:** All user-specific data (addresses, wishlist items, orders) is stored under `/users/{userId}/...`, ensuring strong path-based ownership.\n*   **Global Public Data:** Product catalog, categories, collections, and general configurations are stored in top-level collections, reflecting their public read access pattern.\n*   **Admin-Managed Data:** A dedicated `/roles_admin` collection ensures explicit, database-backed access control for administrators, aligning with the DBAC principle. The `status` field for `Product`, `Order`, and `OtpCode` entities adheres to explicit state modeling, simplifying conditional access rules (e.g., `products.published == true`).\n\nThis design minimizes rule complexity, prevents common security pitfalls, and ensures that the system is both performant and easily debuggable."
+  }
+}
