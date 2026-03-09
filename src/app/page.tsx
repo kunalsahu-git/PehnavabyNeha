@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck } from "lucide-react";
+import { ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck, Minus, Plus, ShoppingBag, RotateCcw, Banknote, Lock, MapPin } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/store/ProductCard";
@@ -11,6 +11,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
+import { useCart } from "@/context/CartContext";
 
 const CATEGORIES = [
   { name: "Ethnic Sets", image: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '', hint: PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageHint || '', href: "/collections/ethnic-wear" },
@@ -53,10 +54,37 @@ const HERO_SLIDES = [
   },
 ];
 
+const FEATURED_PRODUCT = {
+  id: 'fp-1',
+  slug: 'jaipur-motif-print-dress',
+  brand: 'Pehnava - She is Special',
+  name: 'Women Hand-Blocked Jaipur Motif Print Dress',
+  price: 2499,
+  originalPrice: 4999,
+  discount: 'SAVE 50%',
+  colors: ['Off White', 'Soft Pink'],
+  sizes: ['XS/36', 'S/38', 'M/40', 'L/42', 'XL/44'],
+  images: [
+    PlaceHolderImages.find(i => i.id === 'cat-western')?.imageUrl || '',
+    PlaceHolderImages.find(i => i.id === 'product-4')?.imageUrl || '',
+    PlaceHolderImages.find(i => i.id === 'hero-1')?.imageUrl || '',
+    PlaceHolderImages.find(i => i.id === 'cat-ethnic')?.imageUrl || '',
+    PlaceHolderImages.find(i => i.id === 'product-2')?.imageUrl || '',
+    PlaceHolderImages.find(i => i.id === 'product-1')?.imageUrl || '',
+  ]
+};
+
 export default function Home() {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
+  const { addItem } = useCart();
+
+  // Featured Product State
+  const [selectedSize, setSelectedSize] = useState('M/40');
+  const [selectedColor, setSelectedColor] = useState('Off White');
+  const [quantity, setQuantity] = useState(1);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const autoplayHero = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: false })
@@ -75,9 +103,21 @@ export default function Home() {
     });
   }, [api]);
 
+  const handleFeaturedAddToCart = () => {
+    addItem({
+      id: FEATURED_PRODUCT.id,
+      name: FEATURED_PRODUCT.name,
+      price: FEATURED_PRODUCT.price,
+      image: FEATURED_PRODUCT.images[0],
+      quantity: quantity,
+      size: selectedSize,
+      color: selectedColor
+    });
+  };
+
   return (
     <div className="flex flex-col w-full overflow-hidden">
-      {/* Hero Banner Section - Reduced height to half screen */}
+      {/* Hero Banner Section */}
       <section className="relative h-[45vh] md:h-[50vh] w-full bg-secondary overflow-hidden">
         <Carousel 
           setApi={setApi}
@@ -171,7 +211,149 @@ export default function Home() {
         </div>
       </section>
 
-      {/* New Arrivals Section - 360 Degree Infinite Auto Carousel */}
+      {/* Featured Product Section - Inspired by high-end fashion */}
+      <section className="bg-white py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-headline font-bold tracking-widest uppercase">Featured Product</h2>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+            {/* Gallery Side */}
+            <div className="space-y-4">
+              <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-secondary/20 shadow-xl">
+                <Image
+                  src={FEATURED_PRODUCT.images[activeImageIndex]}
+                  alt={FEATURED_PRODUCT.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {FEATURED_PRODUCT.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={cn(
+                      "relative aspect-square rounded-md overflow-hidden border-2 transition-all",
+                      activeImageIndex === idx ? "border-primary scale-105" : "border-transparent opacity-70 hover:opacity-100"
+                    )}
+                  >
+                    <Image src={img} alt={`Thumbnail ${idx}`} fill className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Info Side */}
+            <div className="flex flex-col space-y-8">
+              <div className="space-y-4">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{FEATURED_PRODUCT.brand}</span>
+                <h3 className="text-3xl md:text-4xl font-headline font-bold leading-tight">{FEATURED_PRODUCT.name}</h3>
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-destructive font-bold text-xs bg-destructive/10 px-2 py-1 rounded">{FEATURED_PRODUCT.discount}</span>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-bold text-primary">₹{FEATURED_PRODUCT.price.toLocaleString()}</span>
+                  <span className="text-lg text-muted-foreground line-through">₹{FEATURED_PRODUCT.originalPrice.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="h-px bg-border" />
+
+              {/* Selection */}
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Size:</label>
+                  <div className="flex flex-wrap gap-2">
+                    {FEATURED_PRODUCT.sizes.map(size => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={cn(
+                          "min-w-12 h-10 px-3 flex items-center justify-center rounded border text-xs font-medium transition-all",
+                          selectedSize === size ? "bg-primary text-white border-primary" : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Color: {selectedColor}</label>
+                  <div className="flex gap-3">
+                    {FEATURED_PRODUCT.colors.map(color => (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        className={cn(
+                          "w-8 h-8 rounded border-2 p-0.5 transition-all",
+                          selectedColor === color ? "border-primary" : "border-border"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-full h-full rounded-sm",
+                          color === 'Off White' ? "bg-[#FDFBF7]" : "bg-pink-200"
+                        )} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center rounded-full border border-border h-12 px-2">
+                    <Button variant="ghost" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-8 w-8 rounded-full">
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-10 text-center font-bold text-sm">{quantity}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setQuantity(q => q + 1)} className="h-8 w-8 rounded-full">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleFeaturedAddToCart}
+                    className="flex-1 h-12 bg-white text-primary border-primary hover:bg-primary/5 border-2 font-bold rounded-full"
+                  >
+                    ADD TO CART
+                  </Button>
+                </div>
+
+                <Button className="w-full h-14 bg-slate-900 text-white hover:bg-slate-800 font-bold rounded-full flex items-center justify-center gap-3">
+                  BUY NOW
+                  <div className="flex items-center gap-1 opacity-80">
+                    <Image src="https://placehold.co/30x18/png?text=UPI" width={30} height={18} alt="UPI" className="invert" />
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Button>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-4 pt-4 border-t">
+                {[
+                  { icon: RotateCcw, label: '15 Days Return' },
+                  { icon: Banknote, label: 'Cash On Delivery' },
+                  { icon: Truck, label: 'Free Shipping' },
+                  { icon: ShieldCheck, label: 'Quality Guaranteed' },
+                  { icon: Lock, label: 'Secure Checkout' },
+                  { icon: MapPin, label: 'Made In India' }
+                ].map((badge, i) => (
+                  <div key={i} className="flex flex-col items-center text-center space-y-2">
+                    <badge.icon className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-[10px] leading-tight text-muted-foreground font-medium uppercase tracking-tighter">{badge.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* New Arrivals Section */}
       <section className="bg-secondary/30 py-16 md:py-24 overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-end justify-between mb-12">
@@ -214,7 +396,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Shop the Look / Editorial - Refined Buttons */}
+      {/* Shop the Look Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="flex flex-col items-center text-center mb-16 space-y-3">
           <span className="text-primary font-bold uppercase tracking-widest text-sm">Editorial</span>
@@ -231,7 +413,6 @@ export default function Home() {
                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
                 data-ai-hint={PlaceHolderImages[i + 4].imageHint}
               />
-              {/* Permanent elegant overlay with visible buttons */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end p-8 text-white space-y-4">
                 <h3 className="text-2xl md:text-3xl font-headline font-bold tracking-tight">Midnight Soiree</h3>
