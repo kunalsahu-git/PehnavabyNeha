@@ -9,7 +9,6 @@ import {
   Eye, 
   Truck, 
   CheckCircle2, 
-  XCircle,
   Download,
   Calendar,
   IndianRupee,
@@ -51,22 +50,26 @@ import {
   SheetDescription,
   SheetFooter
 } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { useFirestore, useCollection, useMemoFirebase, type WithId } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, type WithId } from '@/firebase';
 import { getAllOrdersQuery, updateOrderStatus, verifyOrderPayment, type OrderData } from '@/firebase/firestore/orders';
 
 export default function OrdersAdminPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<WithId<OrderData> | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Live Firestore Data
-  const ordersQuery = useMemoFirebase(() => getAllOrdersQuery(db), [db]);
+  // Live Firestore Data - Defensive Query
+  const ordersQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return getAllOrdersQuery(db);
+  }, [db, user]);
+
   const { data: orders, isLoading } = useCollection<OrderData>(ordersQuery);
 
   const filteredOrders = (orders ?? []).filter(order => {
@@ -312,11 +315,11 @@ export default function OrdersAdminPage() {
                 </div>
                 <div className="flex items-start gap-4">
                   <MapPin className="h-5 w-5 text-slate-400 shrink-0" />
-                  <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  <div className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
                     {selectedOrder?.addressJson ? JSON.parse(selectedOrder.addressJson).line1 : ''}
                     <br />
                     {selectedOrder?.addressJson ? `${JSON.parse(selectedOrder.addressJson).city}, ${JSON.parse(selectedOrder.addressJson).pincode}` : ''}
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>

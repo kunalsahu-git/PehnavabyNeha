@@ -30,7 +30,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useFirestore, useCollection, useMemoFirebase, type WithId } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, type WithId } from '@/firebase';
 import { generateProductDescription } from '@/ai/flows/generate-product-description';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/lib/cloudinary';
@@ -88,6 +88,7 @@ function productToForm(p: WithId<ProductData>): ProductFormState {
 
 export default function ProductsAdminPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,10 +102,13 @@ export default function ProductsAdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetIndex, setUploadTargetIndex] = useState<number>(0);
 
-  // Real-time Firestore subscription
+  // Real-time Firestore subscription - Defensive Query
   const productsQuery = useMemoFirebase(
-    () => query(collection(db, 'products'), orderBy('createdAt', 'desc')),
-    [db]
+    () => {
+      if (!db || !user) return null;
+      return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+    },
+    [db, user]
   );
   const { data: products, isLoading } = useCollection<ProductData>(productsQuery);
 
@@ -134,7 +138,6 @@ export default function ProductsAdminPage() {
     setSheetOpen(true);
   };
 
-  // Cloudinary upload
   const handleImageUpload = async (file: File, index: number) => {
     setUploadingIndex(index);
     try {
@@ -154,7 +157,6 @@ export default function ProductsAdminPage() {
   const removeImage = (index: number) =>
     set('images', form.images.filter((_, i) => i !== index));
 
-  // AI description
   const handleGenerateAI = async () => {
     if (!form.name) {
       toast({ title: 'Name required', description: 'Enter a product name first.', variant: 'destructive' });
@@ -178,7 +180,6 @@ export default function ProductsAdminPage() {
     }
   };
 
-  // Save
   const handleSave = async () => {
     if (!form.name || !form.price) {
       toast({ title: 'Required fields missing', description: 'Name and price are required.', variant: 'destructive' });
@@ -222,7 +223,6 @@ export default function ProductsAdminPage() {
     }
   };
 
-  // Delete
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
@@ -421,7 +421,6 @@ export default function ProductsAdminPage() {
           </SheetHeader>
 
           <div className="py-8 space-y-8">
-            {/* Name + Slug */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Product Name *</Label>
@@ -443,7 +442,6 @@ export default function ProductsAdminPage() {
               </div>
             </div>
 
-            {/* Category, Fabric, Price, Original Price, Stock, Colors */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Category</Label>
@@ -505,7 +503,6 @@ export default function ProductsAdminPage() {
               </div>
             </div>
 
-            {/* Sizes */}
             <div className="space-y-3">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Available Sizes</Label>
               <div className="flex flex-wrap gap-2">
@@ -526,7 +523,6 @@ export default function ProductsAdminPage() {
               </div>
             </div>
 
-            {/* Toggles */}
             <div className="grid grid-cols-2 gap-4">
               {([
                 ['isNew', 'New Arrival'],
@@ -544,7 +540,6 @@ export default function ProductsAdminPage() {
               ))}
             </div>
 
-            {/* Images */}
             <div className="space-y-4">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Product Images · Cloudinary CDN
@@ -598,7 +593,6 @@ export default function ProductsAdminPage() {
               <p className="text-[10px] text-muted-foreground">First image = main display image. Recommended: 3:4 ratio, min 600×800px.</p>
             </div>
 
-            {/* AI Description */}
             <div className="space-y-4 bg-primary/5 p-6 rounded-2xl border border-primary/10">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
@@ -623,7 +617,6 @@ export default function ProductsAdminPage() {
               <p className="text-[8px] text-muted-foreground font-medium italic">Powered by Genkit · Tailored for Pehnava by Neha brand voice.</p>
             </div>
 
-            {/* Details */}
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Product Details (one per line)

@@ -53,6 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { data: adminRole, isLoading: isAdminChecking } = useDoc(adminRoleRef);
 
   useEffect(() => {
+    // Redirect only when we're sure the user isn't authenticated
     if (!isUserLoading && !user) {
       router.push('/account/login');
     }
@@ -63,13 +64,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/');
   };
 
-  if (isUserLoading || isAdminChecking) {
+  // Show loader during initial auth check or while confirming admin privileges
+  if (isUserLoading || (user && isAdminChecking)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Authenticating Boutique Admin...</p>
       </div>
     );
+  }
+
+  // If no user exists yet, stop rendering to prevent children from running unauthorized queries
+  if (!user) {
+    return null;
   }
 
   // DEVELOPMENT BYPASS: If user is logged in but not an admin (no document in roles_admin), 

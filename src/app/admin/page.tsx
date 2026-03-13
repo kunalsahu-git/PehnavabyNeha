@@ -3,7 +3,6 @@
 import React from 'react';
 import { 
   ShoppingBag, 
-  Users, 
   IndianRupee, 
   TrendingUp, 
   ArrowUpRight, 
@@ -13,7 +12,6 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { collection, query, limit, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -26,16 +24,24 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { getAllOrdersQuery } from '@/firebase/firestore/orders';
 import { getAllProductsQuery } from '@/firebase/firestore/products';
 
 export default function AdminDashboard() {
   const db = useFirestore();
+  const { user } = useUser();
 
-  // Dashboard Stats (Real Counts)
-  const productsQuery = useMemoFirebase(() => getAllProductsQuery(db), [db]);
-  const ordersQuery = useMemoFirebase(() => getAllOrdersQuery(db), [db]);
+  // Dashboard Stats - Defensive Queries (Wait for user auth)
+  const productsQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return getAllProductsQuery(db);
+  }, [db, user]);
+
+  const ordersQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return getAllOrdersQuery(db);
+  }, [db, user]);
   
   const { data: products, isLoading: isLoadingProducts } = useCollection(productsQuery);
   const { data: orders, isLoading: isLoadingOrders } = useCollection(ordersQuery);
