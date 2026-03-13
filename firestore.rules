@@ -27,7 +27,7 @@ service cloud.firestore {
 
     /**
      * Checks if the signed-in user is an admin.
-     * BOOTSTRAP_ADMINS: include the current developer UID for seamless access.
+     * BOOTSTRAP_ADMINS: include your specific UID for seamless access to the new project.
      */
     function isBootstrapAdmin() {
       return isSignedIn() && request.auth.uid in [
