@@ -64,13 +64,19 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      initiateGoogleSignIn(auth);
-    } catch (error) {
+      await initiateGoogleSignIn(auth);
+    } catch (error: any) {
       setIsLoading(false);
+      let message = "Google Sign-In was restricted or cancelled.";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        message = "This domain is not authorized. Please add it to your Firebase Console 'Authorized domains'.";
+      }
+
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Google Sign-In was restricted or cancelled."
+        description: message
       });
     }
   };
@@ -78,7 +84,7 @@ export default function LoginPage() {
   const handleDirectLogin = async () => {
     setIsLoading(true);
     try {
-      initiateAnonymousSignIn(auth);
+      await initiateAnonymousSignIn(auth);
       // The useEffect will handle the redirect to /admin
     } catch (error: any) {
       setIsLoading(false);
