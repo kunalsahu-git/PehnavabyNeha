@@ -1,53 +1,79 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquare, ShieldCheck, Loader2, FastForward, LogOut } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  MessageSquare, 
+  ShieldCheck, 
+  Loader2, 
+  FastForward, 
+  LogOut,
+  Mail
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { initiateAnonymousSignIn, initiateGoogleSignIn } from '@/firebase/non-blocking-login';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-
-const RESEND_TIMER_SECONDS = 30;
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [name, setName] = useState('');
+  const [step, setStep] = useState<'login' | 'complete-profile'>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
   const { toast } = useToast();
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
 
-  // Handle countdown timer for Resend OTP
+  // Watch for logged in user to check profile status
+  const userProfileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
+  const { data: userProfile, isLoading: isCheckingProfile } = useDoc(userProfileRef);
+
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
+    if (user && !isCheckingProfile) {
+      if (userProfile && userProfile.phone) {
+        // User exists and has a phone number
+        router.push('/');
+      } else {
+        // New user or missing phone - prompt to complete profile
+        setStep('complete-profile');
+        if (user.displayName && !name) setName(user.displayName);
+      }
     }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
+  }, [user, userProfile, isCheckingProfile, router, name]);
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      initiateGoogleSignIn(auth);
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Google Sign-In was restricted or cancelled."
+      });
+    }
+  };
 
   const handleDirectLogin = async () => {
     setIsLoading(true);
     try {
-      // Directly sign in for development purposes as requested
       initiateAnonymousSignIn(auth);
-      
-      // We don't await the above, but we wait a moment to show the user it's happening
       setTimeout(() => {
-        toast({
-          title: "Development Login",
-          description: "Initiating bypass for faster development testing."
-        });
         router.push('/admin');
       }, 1000);
     } catch (error: any) {
@@ -55,8 +81,36 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Login Restricted",
-        description: "Please ensure 'Anonymous Auth' and 'Allow users to sign up' are ENABLED in your Firebase Console."
+        description: "Check Firebase Console settings."
       });
+    }
+  };
+
+  const handleCompleteProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (phone.length < 10) {
+      toast({ variant: "destructive", title: "Invalid Phone", description: "Enter a 10-digit number." });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Save user profile to Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        id: user.uid,
+        name: name || user.displayName || 'Boutique Member',
+        email: user.email || '',
+        phone: `+91${phone}`,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+
+      toast({ title: "Profile Completed", description: "Welcome to Pehnava by Neha!" });
+      router.push('/');
+    } catch (error) {
+      setIsLoading(false);
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not update profile." });
     }
   };
 
@@ -64,81 +118,20 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signOut(auth);
-      toast({ title: "Signed Out", description: "Your session has been cleared." });
+      setStep('login');
+      toast({ title: "Signed Out", description: "Session cleared." });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (phone.length < 10) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Phone Number",
-        description: "Please enter a valid 10-digit mobile number."
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    // Simulate API call to send WhatsApp OTP
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep('otp');
-      setResendTimer(RESEND_TIMER_SECONDS);
-      toast({
-        title: "OTP Sent!",
-        description: "A 6-digit code has been sent to your WhatsApp number."
-      });
-    }, 1500);
-  };
-
-  const handleResendOtp = () => {
-    if (resendTimer > 0) return;
-    
-    setIsLoading(true);
-    // Simulate resending OTP
-    setTimeout(() => {
-      setIsLoading(false);
-      setResendTimer(RESEND_TIMER_SECONDS);
-      toast({
-        title: "OTP Resent",
-        description: "A new code has been sent to your WhatsApp."
-      });
-    }, 1000);
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length !== 6) {
-      toast({
-        variant: "destructive",
-        title: "Invalid Code",
-        description: "Please enter the 6-digit code sent to your WhatsApp."
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      initiateAnonymousSignIn(auth);
-      setTimeout(() => {
-        toast({
-          title: "Welcome Back!",
-          description: "Successfully signed in."
-        });
-        router.push('/');
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Verification Failed",
-        description: "Authentication service is restricted. Check Firebase Console."
-      });
-    }
-  };
+  if (isUserLoading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-[80vh] items-center justify-center py-12 px-4">
@@ -150,61 +143,30 @@ export default function LoginPage() {
                <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" /> Back to Boutique
              </Button>
           </Link>
-          <h1 className="text-3xl font-headline font-bold uppercase tracking-wider">Welcome</h1>
+          <h1 className="text-3xl font-headline font-bold uppercase tracking-wider">
+            {step === 'login' ? "Welcome" : "One Last Step"}
+          </h1>
           <p className="text-muted-foreground text-sm max-w-[280px]">
-            {step === 'phone' 
-              ? "Enter your WhatsApp number to login." 
-              : "We've sent a 6-digit code to your WhatsApp."}
+            {step === 'login' 
+              ? "Join our curated luxury fashion community." 
+              : "Please link your WhatsApp number for order updates."}
           </p>
         </div>
 
-        {user && (
-          <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between">
-            <div className="space-y-0.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Logged in as</p>
-              <p className="text-xs font-medium text-slate-600 truncate max-w-[150px]">{user.uid}</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full h-8 px-3 gap-2">
-              <LogOut className="h-3 w-3" /> Sign Out
-            </Button>
-          </div>
-        )}
-
-        {step === 'phone' ? (
+        {step === 'login' ? (
           <div className="space-y-6">
-            <form onSubmit={handleSendOtp} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Phone Number</Label>
-                <div className="relative group">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r pr-3">+91</span>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="98765 43210"
-                    className="pl-16 h-14 rounded-xl border-slate-200 focus:ring-primary focus:border-primary text-lg font-bold tracking-widest"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    required
-                  />
-                </div>
-              </div>
-
-              <Button 
-                type="submit" 
-                disabled={isLoading || phone.length < 10}
-                className="w-full h-14 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-[0.98] transition-all"
-              >
-                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                  <div className="flex items-center gap-2">
-                    Send OTP via WhatsApp <MessageSquare className="h-4 w-4" />
-                  </div>
-                )}
-              </Button>
-            </form>
+            <Button 
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full h-14 rounded-xl bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-[0.1em] shadow-sm flex items-center justify-center gap-3 transition-all"
+            >
+              <Image src="https://picsum.photos/seed/google/32/32" alt="Google" width={20} height={20} className="rounded-full" />
+              Continue with Google
+            </Button>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Development Only</span></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Admin Only</span></div>
             </div>
 
             <Button 
@@ -213,55 +175,56 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full h-14 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary font-bold text-xs uppercase tracking-[0.2em] transition-all"
             >
-              Skip OTP & Enter Admin Panel <FastForward className="ml-2 h-4 w-4" />
+              Development Bypass <FastForward className="ml-2 h-4 w-4" />
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center ml-1">
-                <Label htmlFor="otp" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Verification Code</Label>
-                <button 
-                  type="button" 
-                  onClick={() => setStep('phone')} 
-                  className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
-                >
-                  Change Number
-                </button>
+          <form onSubmit={handleCompleteProfile} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Full Name</Label>
+                <Input
+                  id="name"
+                  placeholder="Neha Sharma"
+                  className="h-12 rounded-xl border-slate-200"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
               </div>
-              <Input
-                id="otp"
-                type="text"
-                maxLength={6}
-                placeholder="0 0 0 0 0 0"
-                className="h-14 rounded-xl border-slate-200 text-center text-2xl font-bold tracking-[0.5em] focus:ring-primary focus:border-primary"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                autoFocus
-              />
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">WhatsApp Number</Label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold border-r pr-3">+91</span>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="98765 43210"
+                    className="pl-16 h-12 rounded-xl border-slate-200 text-lg font-bold tracking-widest"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
             <Button 
               type="submit" 
-              disabled={isLoading || otp.length !== 6}
-              className="w-full h-14 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg active:scale-[0.98] transition-all"
+              disabled={isLoading || phone.length < 10}
+              className="w-full h-14 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg transition-all"
             >
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify & Sign In"}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete My Profile"}
             </Button>
 
-            <div className="text-center pt-2">
-              <button 
-                type="button" 
-                disabled={resendTimer > 0 || isLoading}
-                onClick={handleResendOtp}
-                className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-[0.1em] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resendTimer > 0 
-                  ? `Didn't receive code? Resend in ${resendTimer}s` 
-                  : "Didn't receive code? Resend Code"}
-              </button>
-            </div>
+            <Button 
+              type="button"
+              variant="ghost"
+              onClick={handleLogout}
+              className="w-full text-muted-foreground text-[10px] font-bold uppercase tracking-widest"
+            >
+              Cancel & Sign Out
+            </Button>
           </form>
         )}
 

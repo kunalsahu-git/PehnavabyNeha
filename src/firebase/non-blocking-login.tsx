@@ -1,18 +1,27 @@
+
 'use client';
 import {
-  Auth, // Import Auth type for type hinting
+  Auth,
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from 'firebase/auth';
 
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth): void {
-  // CRITICAL: Call signInAnonymously directly. Do NOT use 'await signInAnonymously(...)'.
   signInAnonymously(authInstance).catch((error) => {
-    // If sign-up is restricted by admin, this will catch it
     console.error("Authentication Error:", error.code, error.message);
-    // In a real app, we might emit this, but for now we let the UI handle specific button clicks
+    throw error;
+  });
+}
+
+/** Initiate Google sign-in (non-blocking). */
+export function initiateGoogleSignIn(authInstance: Auth): void {
+  const provider = new GoogleAuthProvider();
+  signInWithPopup(authInstance, provider).catch((error) => {
+    console.error("Google Sign-In Error:", error.code, error.message);
     throw error;
   });
 }
