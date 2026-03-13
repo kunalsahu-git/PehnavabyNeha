@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquare, ShieldCheck, Loader2, FastForward } from 'lucide-react';
+import { ArrowLeft, MessageSquare, ShieldCheck, Loader2, FastForward, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 
 const RESEND_TIMER_SECONDS = 30;
 
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0);
   const { toast } = useToast();
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
 
   // Handle countdown timer for Resend OTP
@@ -36,15 +38,36 @@ export default function LoginPage() {
 
   const handleDirectLogin = async () => {
     setIsLoading(true);
-    // Directly sign in for development purposes as requested
-    setTimeout(() => {
+    try {
+      // Directly sign in for development purposes as requested
       initiateAnonymousSignIn(auth);
+      
+      // We don't await the above, but we wait a moment to show the user it's happening
+      setTimeout(() => {
+        toast({
+          title: "Development Login",
+          description: "Initiating bypass for faster development testing."
+        });
+        router.push('/admin');
+      }, 1000);
+    } catch (error: any) {
+      setIsLoading(false);
       toast({
-        title: "Development Login",
-        description: "Bypassing OTP for faster development testing."
+        variant: "destructive",
+        title: "Login Restricted",
+        description: "Please ensure 'Anonymous Auth' and 'Allow users to sign up' are ENABLED in your Firebase Console."
       });
-      router.push('/admin');
-    }, 1000);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoading(true);
+    try {
+      await signOut(auth);
+      toast({ title: "Signed Out", description: "Your session has been cleared." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -98,15 +121,23 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    // Simulate OTP verification and login
-    setTimeout(() => {
+    try {
       initiateAnonymousSignIn(auth);
+      setTimeout(() => {
+        toast({
+          title: "Welcome Back!",
+          description: "Successfully signed in."
+        });
+        router.push('/');
+      }, 1500);
+    } catch (error) {
+      setIsLoading(false);
       toast({
-        title: "Welcome Back!",
-        description: "Successfully signed in."
+        variant: "destructive",
+        title: "Verification Failed",
+        description: "Authentication service is restricted. Check Firebase Console."
       });
-      router.push('/');
-    }, 1500);
+    }
   };
 
   return (
@@ -126,6 +157,18 @@ export default function LoginPage() {
               : "We've sent a 6-digit code to your WhatsApp."}
           </p>
         </div>
+
+        {user && (
+          <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Logged in as</p>
+              <p className="text-xs font-medium text-slate-600 truncate max-w-[150px]">{user.uid}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-full h-8 px-3 gap-2">
+              <LogOut className="h-3 w-3" /> Sign Out
+            </Button>
+          </div>
+        )}
 
         {step === 'phone' ? (
           <div className="space-y-6">
