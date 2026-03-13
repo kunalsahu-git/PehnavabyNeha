@@ -15,7 +15,9 @@ export type Product = {
   isNew?: boolean;
   isSale?: boolean;
   isBestseller?: boolean;
-  createdAt: string; 
+  published?: boolean;
+  stock?: number;
+  createdAt?: any; // string for static data, Firestore Timestamp for DB data
   colors?: string[];
   sizes?: string[];
   fabric?: string;

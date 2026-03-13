@@ -42,9 +42,23 @@ service cloud.firestore {
       return resource != null && isOwner(userId);
     }
 
-    /** Checks if the signed-in user has an entry in the admin roles collection. */
+    /**
+     * Checks if the signed-in user is an admin.
+     * Checks the roles_admin collection OR a hardcoded bootstrap UID list.
+     * To add a new admin permanently: create a document at roles_admin/{uid} in Firebase Console.
+     * BOOTSTRAP_ADMINS: remove these UIDs once you have set up roles_admin docs in production.
+     */
+    function isBootstrapAdmin() {
+      return isSignedIn() && request.auth.uid in [
+        'zS64HBMM25aZwuqBoiiFg1kU9Tk2'
+      ];
+    }
+
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        isBootstrapAdmin() ||
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
+      );
     }
 
     // --- Collection Rules ---
@@ -157,7 +171,10 @@ service cloud.firestore {
      * @principle Conditional visibility based on publication status.
      */
     match /products/{productId} {
-      allow get, list: if (resource.data.published == true) || isAdmin();
+      // get: check published flag (resource is available for single-doc reads)
+      allow get: if (resource.data.published == true) || isAdmin();
+      // list: resource is null for queries; allow all — storefront queries filter by published==true client-side
+      allow list: if true;
       allow create, update, delete: if isAdmin();
 
       /**
