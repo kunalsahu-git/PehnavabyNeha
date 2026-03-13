@@ -100,18 +100,19 @@ service cloud.firestore {
     }
 
     match /products/{productId} {
-      allow get: if (resource.data.published == true) || isAdmin();
-      allow list: if true; // Storefront filters by published status
+      // Public read access for the catalog
+      allow get, list: if true;
+      // Admin write access
       allow create, update, delete: if isAdmin();
 
       match /images/{imageId} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin();
+        allow read: if true;
+        allow write: if isAdmin();
       }
 
       match /variants/{variantId} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin();
+        allow read: if true;
+        allow write: if isAdmin();
       }
     }
 
