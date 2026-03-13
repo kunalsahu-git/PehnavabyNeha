@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +9,8 @@ import {
   Loader2, 
   FastForward, 
   LogOut,
-  Mail
+  Mail,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function LoginPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Watch for logged in user to check profile status
+  // Watch for logged in user to check profile status in Firestore
   const userProfileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -44,8 +44,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isCheckingProfile) {
+      // Check if user is anonymous (Dev Bypass)
+      if (user.isAnonymous) {
+        router.push('/admin');
+        return;
+      }
+
+      // Check if real user has a phone number in Firestore
       if (userProfile && userProfile.phone) {
-        // User exists and has a phone number
         router.push('/');
       } else {
         // New user or missing phone - prompt to complete profile
@@ -73,15 +79,13 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       initiateAnonymousSignIn(auth);
-      setTimeout(() => {
-        router.push('/admin');
-      }, 1000);
+      // The useEffect will handle the redirect to /admin
     } catch (error: any) {
       setIsLoading(false);
       toast({
         variant: "destructive",
         title: "Login Restricted",
-        description: "Check Firebase Console settings."
+        description: "Check Firebase Console settings for Anonymous Auth."
       });
     }
   };
@@ -89,14 +93,14 @@ export default function LoginPage() {
   const handleCompleteProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    
     if (phone.length < 10) {
-      toast({ variant: "destructive", title: "Invalid Phone", description: "Enter a 10-digit number." });
+      toast({ variant: "destructive", title: "Invalid Phone", description: "Please enter a 10-digit number." });
       return;
     }
 
     setIsLoading(true);
     try {
-      // Save user profile to Firestore
       const userRef = doc(db, 'users', user.uid);
       await setDoc(userRef, {
         id: user.uid,
@@ -110,7 +114,7 @@ export default function LoginPage() {
       router.push('/');
     } catch (error) {
       setIsLoading(false);
-      toast({ variant: "destructive", title: "Save Failed", description: "Could not update profile." });
+      toast({ variant: "destructive", title: "Save Failed", description: "Could not update your profile." });
     }
   };
 
@@ -119,16 +123,17 @@ export default function LoginPage() {
     try {
       await signOut(auth);
       setStep('login');
-      toast({ title: "Signed Out", description: "Session cleared." });
+      toast({ title: "Signed Out", description: "Your session has been cleared." });
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || (user && isCheckingProfile)) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
+      <div className="min-h-[80vh] flex flex-col items-center justify-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Verifying Boutique Session...</p>
       </div>
     );
   }
@@ -166,7 +171,7 @@ export default function LoginPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Admin Only</span></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Admin Testing</span></div>
             </div>
 
             <Button 
@@ -175,7 +180,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full h-14 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary font-bold text-xs uppercase tracking-[0.2em] transition-all"
             >
-              Development Bypass <FastForward className="ml-2 h-4 w-4" />
+              Skip OTP & Enter Admin Panel <FastForward className="ml-2 h-4 w-4" />
             </Button>
           </div>
         ) : (
