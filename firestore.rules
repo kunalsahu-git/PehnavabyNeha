@@ -6,23 +6,6 @@ service cloud.firestore {
      * CORE PHILOSOPHY
      * This ruleset enforces a strict User-Ownership model for personal data and a Role-Based Access Control (RBAC) 
      * model for administrative functions. 
-     *
-     * DATA STRUCTURE
-     * 1. Private User Data: Stored under `/users/{userId}/...`. Access is strictly limited to the document owner or admins.
-     * 2. Public Catalog: Collections like `/products`, `/categories`, and `/collections` are publicly readable to support 
-     *    the storefront experience, while modifications are restricted to administrators.
-     * 3. System Config: Global settings and homepage configurations are publicly readable but admin-protected.
-     * 4. Identity & Roles: Authentication is handled via path-based UIDs, and administrative privileges are 
-     *    verified via a dedicated `/roles_admin` collection.
-     *
-     * KEY SECURITY DECISIONS
-     * - Authorization Independence: By nesting user data (orders, addresses) under the User path, we verify ownership 
-     *   via the path variable `{userId}`, avoiding expensive cross-document lookups.
-     * - Denormalization: Critical IDs (like `userId`) are expected to be present within documents to maintain relational 
-     *   integrity even when using shallow queries.
-     * - Administrative Posture: Admins (defined in `/roles_admin`) have override access for reading/updating most 
-     *   user-related data for customer support and fulfillment.
-     * - OTP Security: OTP codes are system-internal and explicitly denied to all client-side requests.
      */
 
     // --- Helper Functions ---
@@ -44,13 +27,12 @@ service cloud.firestore {
 
     /**
      * Checks if the signed-in user is an admin.
-     * Checks the roles_admin collection OR a hardcoded bootstrap UID list.
-     * To add a new admin permanently: create a document at roles_admin/{uid} in Firebase Console.
-     * BOOTSTRAP_ADMINS: remove these UIDs once you have set up roles_admin docs in production.
+     * BOOTSTRAP_ADMINS: include the current developer UID for seamless access.
      */
     function isBootstrapAdmin() {
       return isSignedIn() && request.auth.uid in [
-        'zS64HBMM25aZwuqBoiiFg1kU9Tk2'
+        'zS64HBMM25aZwuqBoiiFg1kU9Tk2',
+        'c5yNNdozphYmPahMpu13nUnerVI2'
       ];
     }
 
@@ -63,13 +45,6 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    /**
-     * @description Rules for the User profile. Users can only create and manage their own profile.
-     * @path /users/{userId}
-     * @allow (create) if auth.uid == userId
-     * @deny (list) if request is not for the user's own UID.
-     * @principle Self-creation and strict ownership for user profiles.
-     */
     match /users/{userId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
@@ -77,13 +52,6 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Rules for user-owned addresses.
-     * @path /users/{userId}/addresses/{addressId}
-     * @allow (get) if userId matches auth.uid.
-     * @deny (update) if attempting to change the userId link.
-     * @principle Path-based ownership with relational integrity enforcement.
-     */
     match /users/{userId}/addresses/{addressId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
@@ -91,13 +59,6 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId) || isAdmin();
     }
 
-    /**
-     * @description Rules for a user's wishlist.
-     * @path /users/{userId}/wishlistItems/{wishlistItemId}
-     * @allow (create) if the owner is adding the item.
-     * @deny (read) if user is not the owner or admin.
-     * @principle Restricts access to a user's own data tree.
-     */
     match /users/{userId}/wishlistItems/{wishlistItemId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
@@ -105,24 +66,12 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId) || isAdmin();
     }
 
-    /**
-     * @description Rules for customer orders.
-     * @path /users/{userId}/orders/{orderId}
-     * @allow (get) for the customer who placed the order.
-     * @deny (create) if the userId in data doesn't match the path.
-     * @principle Ensures order history is private to the user and accessible to admins.
-     */
     match /users/{userId}/orders/{orderId} {
       allow get, list: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
       allow delete: if isAdmin();
 
-      /**
-       * @description Rules for items within an order.
-       * @path /users/{userId}/orders/{orderId}/items/{orderItemId}
-       * @principle Inherits ownership context from parent order path.
-       */
       match /items/{orderItemId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId);
@@ -131,97 +80,51 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description System-managed OTP codes.
-     * @path /otp_codes/{otpCodeId}
-     * @deny (all) Direct client access to OTP codes is forbidden.
-     * @principle Protects sensitive authentication secrets from client-side exposure.
-     */
+    /** Support collectionGroup query for Admin Dashboard */
+    match /{path=**}/orders/{orderId} {
+      allow list: if isAdmin();
+    }
+
     match /otp_codes/{otpCodeId} {
       allow read, write: if false;
     }
 
-    /**
-     * @description Publicly readable product categories.
-     * @path /categories/{categoryId}
-     * @allow (get, list) for all users.
-     * @deny (write) for non-admin users.
-     * @principle Public read access with administrative write control.
-     */
     match /categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Publicly readable marketing collections.
-     * @path /collections/{collectionId}
-     * @principle Public read access with administrative write control.
-     */
     match /collections/{collectionId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Catalog products. Only published products are visible to non-admins.
-     * @path /products/{productId}
-     * @allow (list) if published == true.
-     * @deny (update) if user is not an admin.
-     * @principle Conditional visibility based on publication status.
-     */
     match /products/{productId} {
-      // get: check published flag (resource is available for single-doc reads)
       allow get: if (resource.data.published == true) || isAdmin();
-      // list: resource is null for queries; allow all — storefront queries filter by published==true client-side
-      allow list: if true;
+      allow list: if true; // Storefront filters by published status
       allow create, update, delete: if isAdmin();
 
-      /**
-       * @description Product images subcollection.
-       * @path /products/{productId}/images/{imageId}
-       */
       match /images/{imageId} {
         allow get, list: if true;
         allow create, update, delete: if isAdmin();
       }
 
-      /**
-       * @description Product variants (sizes/colors) subcollection.
-       * @path /products/{productId}/variants/{variantId}
-       */
       match /variants/{variantId} {
         allow get, list: if true;
         allow create, update, delete: if isAdmin();
       }
     }
 
-    /**
-     * @description Homepage configuration settings.
-     * @path /configs/homepage/{configKey}
-     * @principle Public read access for storefront customization.
-     */
     match /configs/homepage/{configKey} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Global application settings.
-     * @path /configs/settings/{settingKey}
-     * @principle Public read access for global variables like UPI IDs.
-     */
     match /configs/settings/{settingKey} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Administrative roles. Used for rule-based existence checks.
-     * @path /roles_admin/{adminUid}
-     * @deny (write, list) Direct client modification or listing of admins is forbidden.
-     * @principle Database-Backed Access Control (DBAC) for administrative privileges.
-     */
     match /roles_admin/{adminUid} {
       allow get: if isSignedIn();
       allow list, create, update, delete: if false;
