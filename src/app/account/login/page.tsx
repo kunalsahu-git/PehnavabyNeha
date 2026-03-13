@@ -70,7 +70,8 @@ export default function LoginPage() {
       let message = "Google Sign-In was restricted or cancelled.";
       
       if (error.code === 'auth/unauthorized-domain') {
-        message = "This domain is not authorized. Please add it to your Firebase Console 'Authorized domains'.";
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'your domain';
+        message = `This domain (${currentDomain}) is not authorized. Please add it to your Firebase Console 'Authorized domains'.`;
       }
 
       toast({
