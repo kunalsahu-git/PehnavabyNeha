@@ -193,7 +193,7 @@ export default function LoginPage() {
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-              <p className="text-[10px] italic">Paste this into Authentication > Settings > Authorized Domains</p>
+              <p className="text-[10px] italic">Paste this into Authentication &gt; Settings &gt; Authorized Domains</p>
             </AlertDescription>
           </Alert>
         )}
