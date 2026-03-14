@@ -4,8 +4,7 @@ service cloud.firestore {
 
     /**
      * CORE PHILOSOPHY
-     * This ruleset enforces a strict User-Ownership model for personal data and a Role-Based Access Control (RBAC) 
-     * model for administrative functions. 
+     * Strict User-Ownership for personal data and Role-Based Access Control (RBAC).
      */
 
     // --- Helper Functions ---
@@ -30,34 +29,36 @@ service cloud.firestore {
       );
     }
 
+    /** Ownership helper */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // --- Collection Rules ---
 
     match /users/{userId} {
-      // Users can manage their own profile; Admins can see all.
-      // Direct comparison is often more reliable than nested function calls for root document matches.
-      allow get, list: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-      allow delete: if isAdmin();
+      // Robust ownership rule: A user can always read/write their own document.
+      allow get, write: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
 
       // Sub-collections for user data
       match /addresses/{addressId} {
-        allow read, write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin();
       }
       
       match /wishlistItems/{wishlistItemId} {
-        allow read, write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin();
       }
 
       match /orders/{orderId} {
-        allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-        allow create: if isSignedIn() && request.auth.uid == userId;
-        allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId) || isAdmin();
         allow delete: if isAdmin();
 
         match /items/{orderItemId} {
-          allow read: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
-          allow write: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+          allow read: if isOwner(userId) || isAdmin();
+          allow write: if isOwner(userId) || isAdmin();
         }
       }
     }
@@ -67,7 +68,7 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
-    /** OTP codes are internal and shouldn't be read by clients directly */
+    /** OTP codes are internal */
     match /otp_codes/{otpCodeId} {
       allow read, write: if false;
     }
@@ -84,9 +85,7 @@ service cloud.firestore {
     }
 
     match /products/{productId} {
-      // Public read access for the catalog
       allow get, list: if true;
-      // Admin write access
       allow create, update, delete: if isAdmin();
 
       match /images/{imageId} {
