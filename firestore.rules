@@ -26,16 +26,18 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the signed-in user is an admin.
-     * BOOTSTRAP_ADMINS: include your specific UID for seamless access to the new project.
+     * Checks if the signed-in user is a developer/bootstrap admin.
+     * UIDs included here have master access during the initial setup phase.
      */
     function isBootstrapAdmin() {
       return isSignedIn() && request.auth.uid in [
         'zS64HBMM25aZwuqBoiiFg1kU9Tk2',
-        'c5yNNdozphYmPahMpu13nUnerVI2'
+        'c5yNNdozphYmPahMpu13nUnerVI2',
+        'RQxTHd3OakSJZ8HsjEPkO4jygg93'
       ];
     }
 
+    /** General admin check combining hardcoded UIDs and database roles. */
     function isAdmin() {
       return isSignedIn() && (
         isBootstrapAdmin() ||
@@ -46,49 +48,45 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
+      // Users can manage their own profile; Admins can see all.
       allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.id == resource.data.id) || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /users/{userId}/addresses/{addressId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
-      allow delete: if isExistingOwner(userId) || isAdmin();
-    }
-
-    match /users/{userId}/wishlistItems/{wishlistItemId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
-      allow delete: if isExistingOwner(userId) || isAdmin();
-    }
-
-    match /users/{userId}/orders/{orderId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
 
-      match /items/{orderItemId} {
-        allow get, list: if isOwner(userId) || isAdmin();
+      // Sub-collections for user data
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+      
+      match /wishlistItems/{wishlistItemId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /orders/{orderId} {
+        allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId);
-        allow update: if (isExistingOwner(userId)) || isAdmin();
+        allow update: if isOwner(userId) || isAdmin();
         allow delete: if isAdmin();
+
+        match /items/{orderItemId} {
+          allow read: if isOwner(userId) || isAdmin();
+          allow write: if isOwner(userId) || isAdmin();
+        }
       }
     }
 
-    /** Support collectionGroup query for Admin Dashboard */
+    /** Support collectionGroup query for Admin Dashboard to see all orders */
     match /{path=**}/orders/{orderId} {
       allow list: if isAdmin();
     }
 
+    /** OTP codes are internal and shouldn't be read by clients directly */
     match /otp_codes/{otpCodeId} {
       allow read, write: if false;
     }
 
+    /** Catalog Configuration */
     match /categories/{categoryId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
@@ -116,6 +114,7 @@ service cloud.firestore {
       }
     }
 
+    /** App Configuration & Settings */
     match /configs/homepage/{configKey} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
@@ -126,6 +125,7 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    /** RBAC Collection */
     match /roles_admin/{adminUid} {
       allow get: if isSignedIn();
       allow list, create, update, delete: if false;
