@@ -10,7 +10,9 @@ import {
   FastForward, 
   LogOut,
   Mail,
-  Smartphone
+  Smartphone,
+  AlertCircle,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,12 +24,15 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Image from 'next/image';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [step, setStep] = useState<'login' | 'complete-profile'>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [domainError, setDomainError] = useState<string | null>(null);
+  
   const { toast } = useToast();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
@@ -63,22 +68,23 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setDomainError(null);
     try {
       await initiateGoogleSignIn(auth);
     } catch (error: any) {
       setIsLoading(false);
-      let message = "Google Sign-In was restricted or cancelled.";
+      console.error("Login Error:", error.code);
       
       if (error.code === 'auth/unauthorized-domain') {
-        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'your domain';
-        message = `This domain (${currentDomain}) is not authorized. Please add it to your Firebase Console 'Authorized domains'.`;
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+        setDomainError(hostname);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: error.message || "Google Sign-In was restricted or cancelled."
+        });
       }
-
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: message
-      });
     }
   };
 
@@ -86,13 +92,12 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await initiateAnonymousSignIn(auth);
-      // The useEffect will handle the redirect to /admin
     } catch (error: any) {
       setIsLoading(false);
       toast({
         variant: "destructive",
         title: "Login Restricted",
-        description: "Check Firebase Console settings for Anonymous Auth."
+        description: "Please ensure Anonymous Auth is enabled in Firebase Console."
       });
     }
   };
@@ -130,10 +135,16 @@ export default function LoginPage() {
     try {
       await signOut(auth);
       setStep('login');
+      setDomainError(null);
       toast({ title: "Signed Out", description: "Your session has been cleared." });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied!", description: "Hostname copied to clipboard." });
   };
 
   if (isUserLoading || (user && isCheckingProfile)) {
@@ -165,6 +176,28 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {domainError && (
+          <Alert variant="destructive" className="bg-red-50 border-red-100 rounded-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="text-xs font-bold uppercase tracking-widest">Unauthorized Domain</AlertTitle>
+            <AlertDescription className="text-xs space-y-3 mt-2">
+              <p>Firebase Console requires the exact hostname (no https, no path).</p>
+              <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-red-200">
+                <code className="text-[10px] font-bold flex-1 break-all">{domainError}</code>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-6 w-6" 
+                  onClick={() => copyToClipboard(domainError)}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+              <p className="text-[10px] italic">Paste this into Authentication > Settings > Authorized Domains</p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {step === 'login' ? (
           <div className="space-y-6">
             <Button 
@@ -172,13 +205,17 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full h-14 rounded-xl bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-[0.1em] shadow-sm flex items-center justify-center gap-3 transition-all"
             >
-              <Image src="https://picsum.photos/seed/google/32/32" alt="Google" width={20} height={20} className="rounded-full" />
-              Continue with Google
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                <>
+                  <Image src="https://picsum.photos/seed/google/32/32" alt="Google" width={20} height={20} className="rounded-full" />
+                  Continue with Google
+                </>
+              )}
             </Button>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Admin Testing</span></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Development</span></div>
             </div>
 
             <Button 
