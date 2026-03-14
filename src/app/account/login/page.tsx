@@ -9,10 +9,11 @@ import {
   Loader2, 
   FastForward, 
   LogOut,
-  Mail,
   Smartphone,
   AlertCircle,
-  Copy
+  Copy,
+  Database,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [step, setStep] = useState<'login' | 'complete-profile'>('login');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingDb, setIsTestingDb] = useState(false);
   const [domainError, setDomainError] = useState<string | null>(null);
   
   const { toast } = useToast();
@@ -49,19 +51,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isCheckingProfile) {
-      // Check if user is anonymous (Dev Bypass)
-      if (user.isAnonymous) {
-        router.push('/admin');
-        return;
-      }
-
       // Check if real user has a phone number in Firestore
       if (userProfile && userProfile.phone) {
-        router.push('/');
+        if (!user.isAnonymous) {
+          router.push('/');
+        }
       } else {
         // New user or missing phone - prompt to complete profile
-        setStep('complete-profile');
-        if (user.displayName && !name) setName(user.displayName);
+        if (!user.isAnonymous) {
+          setStep('complete-profile');
+          if (user.displayName && !name) setName(user.displayName);
+        }
       }
     }
   }, [user, userProfile, isCheckingProfile, router, name]);
@@ -92,6 +92,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await initiateAnonymousSignIn(auth);
+      toast({ title: "Bypass Successful", description: "Logged in as Admin (Anonymous)." });
     } catch (error: any) {
       setIsLoading(false);
       toast({
@@ -99,6 +100,38 @@ export default function LoginPage() {
         title: "Login Restricted",
         description: "Please ensure Anonymous Auth is enabled in Firebase Console."
       });
+    }
+  };
+
+  const testDbConnection = async () => {
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "Not Authenticated", description: "Please log in first." });
+      return;
+    }
+
+    setIsTestingDb(true);
+    try {
+      const testRef = doc(db, 'users', user.uid);
+      await setDoc(testRef, {
+        id: user.uid,
+        lastConnectionTest: serverTimestamp(),
+        testStatus: 'SUCCESS',
+        environment: 'Firebase Studio'
+      }, { merge: true });
+
+      toast({ 
+        title: "DB Connected!", 
+        description: "Successfully wrote dummy data to your Firestore users collection." 
+      });
+    } catch (error: any) {
+      console.error("DB Test Error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Connection Failed", 
+        description: error.message || "Ensure Firestore is enabled in your console." 
+      });
+    } finally {
+      setIsTestingDb(false);
     }
   };
 
@@ -193,39 +226,82 @@ export default function LoginPage() {
                   <Copy className="h-3 w-3" />
                 </Button>
               </div>
-              <p className="text-[10px] italic">Paste this into Authentication &gt; Settings &gt; Authorized Domains</p>
+              <p className="text-[10px] italic">Paste this into Authentication {'->'} Settings {'->'} Authorized Domains</p>
             </AlertDescription>
           </Alert>
         )}
 
         {step === 'login' ? (
           <div className="space-y-6">
-            <Button 
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full h-14 rounded-xl bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-[0.1em] shadow-sm flex items-center justify-center gap-3 transition-all"
-            >
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                <>
-                  <Image src="https://picsum.photos/seed/google/32/32" alt="Google" width={20} height={20} className="rounded-full" />
-                  Continue with Google
-                </>
-              )}
-            </Button>
+            {!user ? (
+              <>
+                <Button 
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="w-full h-14 rounded-xl bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-[0.1em] shadow-sm flex items-center justify-center gap-3 transition-all"
+                >
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                    <>
+                      <Image src="https://picsum.photos/seed/google/32/32" alt="Google" width={20} height={20} className="rounded-full" />
+                      Continue with Google
+                    </>
+                  )}
+                </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Development</span></div>
-            </div>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-muted-foreground">Development</span></div>
+                </div>
 
-            <Button 
-              onClick={handleDirectLogin}
-              variant="outline"
-              disabled={isLoading}
-              className="w-full h-14 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary font-bold text-xs uppercase tracking-[0.2em] transition-all"
-            >
-              Skip OTP & Enter Admin Panel <FastForward className="ml-2 h-4 w-4" />
-            </Button>
+                <Button 
+                  onClick={handleDirectLogin}
+                  variant="outline"
+                  disabled={isLoading}
+                  className="w-full h-14 rounded-xl border-dashed border-2 hover:border-primary hover:text-primary font-bold text-xs uppercase tracking-[0.2em] transition-all"
+                >
+                  Skip OTP & Enter Admin Panel <FastForward className="ml-2 h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-secondary/20 border border-primary/10 text-center">
+                  <p className="text-xs font-bold uppercase text-primary">Session Active</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user.email || 'Anonymous User'}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <Button 
+                    onClick={testDbConnection}
+                    disabled={isTestingDb}
+                    className="w-full h-14 rounded-xl bg-accent hover:bg-accent/90 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-lg flex items-center justify-center gap-3"
+                  >
+                    {isTestingDb ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                      <>
+                        <Database className="h-4 w-4" /> Verify Live DB Connection
+                      </>
+                    )}
+                  </Button>
+
+                  <Button 
+                    asChild
+                    variant="outline"
+                    className="w-full h-14 rounded-xl border-2 font-bold text-xs uppercase tracking-[0.2em]"
+                  >
+                    <Link href="/admin">
+                      Go to Admin Panel <ChevronRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+
+                  <Button 
+                    onClick={handleLogout}
+                    variant="ghost"
+                    className="w-full text-muted-foreground text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Sign Out & Reset
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleCompleteProfile} className="space-y-6">
