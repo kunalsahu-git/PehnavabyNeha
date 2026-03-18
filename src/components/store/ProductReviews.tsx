@@ -22,7 +22,7 @@ export function ProductReviews({ productId }: { productId: string }) {
   const { toast } = useToast();
 
   const reviewsQuery = useMemoFirebase(() => db ? getReviewsByProductIdQuery(db, productId) : null, [db, productId]);
-  const { data: rawReviews, isLoading } = useCollection<ReviewData>(reviewsQuery);
+  const { data: rawReviews, isLoading, error } = useCollection<ReviewData>(reviewsQuery);
   const reviews = (rawReviews ?? []) as WithId<ReviewData>[];
 
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
@@ -136,7 +136,12 @@ export function ProductReviews({ productId }: { productId: string }) {
         </div>
 
         <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-12 md:mt-16 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar">
-          {isLoading ? (
+          {error ? (
+            <div className="col-span-1 md:col-span-full py-12 text-center border-red-200 bg-red-50 text-red-600 rounded-3xl">
+              <h3 className="font-bold">Error loading reviews</h3>
+              <p className="text-xs">{error.message}</p>
+            </div>
+          ) : isLoading ? (
             <div className="col-span-1 md:col-span-full h-32 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
             </div>
