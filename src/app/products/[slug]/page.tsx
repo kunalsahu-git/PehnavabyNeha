@@ -18,6 +18,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/store/ProductCard";
+import { ProductReviews } from "@/components/store/ProductReviews";
 import { Progress } from "@/components/ui/progress";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import {
@@ -309,58 +310,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         </div>
       </div>
 
-      {/* Reviews */}
-      <section className="container mx-auto px-4 py-16 md:py-24 border-t mt-16 md:mt-32">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-10 md:gap-12 items-start justify-between">
-            <div className="w-full md:w-1/3 flex flex-col items-center md:items-start text-center md:text-left">
-              <h2 className="text-base md:text-lg font-bold text-muted-foreground uppercase tracking-widest mb-4 md:mb-6">Customer reviews</h2>
-              <div className="flex items-center gap-3 md:gap-4 mb-2">
-                <span className="text-5xl md:text-6xl font-headline font-bold">4.3</span>
-                <span className="text-xl md:text-2xl text-muted-foreground">/ 5</span>
-              </div>
-              <div className="flex items-center gap-0.5 md:gap-1 text-accent mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={cn("h-4 w-4 md:h-5 md:w-5 fill-current", i < 4 ? "text-accent" : "text-muted-foreground/30")} />
-                ))}
-                <span className="text-xs md:text-sm text-muted-foreground font-bold ml-2">3 reviews</span>
-              </div>
-              <div className="w-full space-y-2 md:space-y-3 mt-4">
-                {[5, 4, 3, 2, 1].map((star) => (
-                  <div key={star} className="flex items-center gap-3">
-                    <span className="text-[10px] md:text-xs font-bold flex items-center gap-1 min-w-[20px] md:min-w-[24px]">
-                      {star} <Star className="h-2.5 w-2.5 md:h-3 md:w-3 fill-accent text-accent" />
-                    </span>
-                    <Progress value={star === 5 ? 33 : star === 4 ? 66 : 0} className="h-1.5 md:h-2 flex-1" />
-                    <span className="text-[9px] md:text-[10px] font-bold text-muted-foreground w-4">{star === 5 ? 1 : star === 4 ? 2 : 0}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="w-full md:w-auto mt-6 md:mt-0">
-              <Button className="w-full md:w-auto bg-slate-800 text-white rounded-md px-10 h-11 md:h-12 hover:bg-slate-900 transition-colors text-xs font-bold">Write a review</Button>
-            </div>
-          </div>
-          <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mt-12 md:mt-16 overflow-x-auto md:overflow-x-visible pb-4 md:pb-0 no-scrollbar">
-            {REVIEWS.map((review) => (
-              <div key={review.id} className="bg-white p-6 md:p-8 rounded-sm shadow-sm border border-slate-100 flex flex-col gap-3 md:gap-4 min-w-[280px] md:min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={cn("h-3.5 w-3.5 md:h-4 md:w-4 fill-current", i < review.rating ? "text-accent" : "text-muted-foreground/30")} />
-                    ))}
-                  </div>
-                  <span className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{review.date}</span>
-                </div>
-                <div>
-                  <h4 className="text-xs md:text-sm font-bold flex items-center gap-2">{review.name} <span>🇮🇳</span></h4>
-                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed mt-2 italic">"{review.comment}"</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Dynamic Reviews Section */}
+      <ProductReviews productId={product.id} />
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

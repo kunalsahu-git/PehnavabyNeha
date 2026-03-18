@@ -118,6 +118,16 @@ service cloud.firestore {
       allow list: if true; // The index must handle the where published == true and orderBy order asc 
       allow create, update, delete: if isAdmin();
     }
+    
+    /** Public User Reviews */
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow get, list: if true;
+      // You must be logged in to create a review
+      allow create: if isSignedIn();
+      // Only admins can delete/update reviews (like hiding bad ones if needed)
+      allow update, delete: if isAdmin();
+    }
 
     /** RBAC Collection */
     match /roles_admin/{adminUid} {

@@ -99,6 +99,16 @@ export function Header() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="pl-4 pb-2 space-y-1 border-l-2 border-primary/10 ml-2 mt-1">
+                              {/* Include the parent link itself if it exists */}
+                              {item.href && (
+                                <Link
+                                  href={item.href}
+                                  onClick={() => setIsOpen(false)} // Need to ensure sheet closes, though SheetTrigger usually handles it. Actually, standard Links inside Sheet often need a manual trigger or wrapped in a SheetClose
+                                  className="block py-2 text-base font-bold text-primary transition-colors uppercase tracking-widest border-b border-primary/10 mb-2 pb-3"
+                                >
+                                  Shop All {item.label} →
+                                </Link>
+                              )}
                               {[...item.children].sort((a, b) => a.order - b.order).map((child, ci) => (
                                 <Link
                                   key={ci}
@@ -169,44 +179,47 @@ export function Header() {
                 {navItems.map((item, idx) => (
                   item.children?.length ? (
                     // Parent with dropdown
-                    <NavigationMenuItem key={idx}>
+                    <NavigationMenuItem key={idx} className="relative group/nav">
                       <NavigationMenuTrigger
                         className={cn(
-                          "h-auto py-2 px-3 xl:px-4 bg-transparent hover:bg-transparent data-[state=open]:bg-transparent text-[11px] font-bold uppercase tracking-[0.2em] transition-colors",
-                          item.highlight ? "text-primary" : "text-foreground/70 hover:text-primary data-[state=open]:text-primary"
+                          "h-auto py-2.5 px-3 xl:px-4 bg-transparent hover:bg-transparent data-[state=open]:bg-transparent text-[11px] font-bold uppercase tracking-[0.2em] transition-colors rounded-none",
+                          item.highlight ? "text-primary group-hover/nav:text-primary/80" : "text-foreground/70 group-hover/nav:text-primary data-[state=open]:text-primary"
                         )}
                       >
                         {item.label}
                       </NavigationMenuTrigger>
-                      <NavigationMenuContent>
-                        <ul className="p-4 w-[280px]">
+                      <NavigationMenuContent className="p-4 md:w-[450px] lg:w-[600px] border shadow-2xl rounded-2xl bg-white/95 backdrop-blur-xl">
+                        <ul className="grid w-full gap-3 md:grid-cols-2">
+                          {/* If the parent has a link, show a 'View All' header button */}
                           {item.href && (
-                            <>
-                              <li>
-                                <NavigationMenuLink asChild>
-                                  <Link
-                                    href={item.href}
-                                    className="block p-3 rounded-xl hover:bg-primary/5 transition-colors"
-                                  >
-                                    <p className="text-sm font-bold text-primary uppercase tracking-wide">View All {item.label}</p>
-                                  </Link>
-                                </NavigationMenuLink>
-                              </li>
-                              <li><Separator className="my-2" /></li>
-                            </>
+                            <li className="col-span-1 md:col-span-2 pb-2 mb-2 border-b">
+                              <NavigationMenuLink asChild>
+                                <Link
+                                  href={item.href}
+                                  target={item.openInNewTab ? "_blank" : undefined}
+                                  className="group flex flex-col justify-center rounded-xl p-4 hover:bg-primary/5 transition-colors"
+                                >
+                                  <span className="text-sm font-headline font-bold text-primary uppercase tracking-widest group-hover:pl-2 transition-all">
+                                    Shop All {item.label} →
+                                  </span>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
                           )}
+                          
+                          {/* Child Items */}
                           {[...item.children].sort((a, b) => a.order - b.order).map((child, ci) => (
-                            <li key={ci}>
+                            <li key={ci} className="row-span-1">
                               <NavigationMenuLink asChild>
                                 <Link
                                   href={child.href}
-                                  className="group block p-3 rounded-xl hover:bg-primary/5 transition-colors"
+                                  className="group block select-none space-y-1 rounded-xl p-3 leading-none no-underline outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50"
                                 >
-                                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-none">
+                                  <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                                     {child.label}
-                                  </p>
+                                  </div>
                                   {child.description && (
-                                    <p className="text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">
+                                    <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground mt-1.5">
                                       {child.description}
                                     </p>
                                   )}
@@ -225,8 +238,8 @@ export function Header() {
                           href={item.href || '/'}
                           target={item.openInNewTab ? '_blank' : undefined}
                           className={cn(
-                            "inline-flex items-center h-auto py-2 px-3 xl:px-4 text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:-translate-y-0.5 whitespace-nowrap",
-                            item.highlight ? "text-primary" : "text-foreground/70 hover:text-primary"
+                            "inline-flex items-center h-auto py-2.5 px-3 xl:px-4 text-[11px] font-bold uppercase tracking-[0.2em] transition-all whitespace-nowrap",
+                            item.highlight ? "text-primary hover:text-primary/80" : "text-foreground/70 hover:text-primary"
                           )}
                         >
                           {item.label}
