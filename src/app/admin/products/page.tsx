@@ -14,6 +14,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -35,6 +40,10 @@ import { useFirestore, useCollection, useMemoFirebase, type WithId } from '@/fir
 import { generateProductDescription } from '@/ai/flows/generate-product-description';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/lib/cloudinary';
+import { cn } from '@/lib/utils';
+import { useDataTable } from '@/hooks/useDataTable';
+import { exportToCSV } from '@/lib/export-utils';
+import { BulkActionToolbar } from '@/components/admin/BulkActionToolbar';
 import {
   getAllProductsQuery, createProduct, updateProduct, deleteProduct,
   formatProductDate, slugify, generateSku, SIZE_OPTIONS, type ProductData,
@@ -84,7 +93,6 @@ export default function ProductsAdminPage() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -98,6 +106,18 @@ export default function ProductsAdminPage() {
   const productsQuery = useMemoFirebase(() => db ? getAllProductsQuery(db) : null, [db]);
   const { data: products, isLoading } = useCollection<ProductData>(productsQuery);
 
+  const {
+    searchTerm, setSearchTerm,
+    filteredData,
+    toggleSort, sortConfig,
+    setFilter, filters,
+    selectedIds, toggleSelect, toggleSelectAll, setSelectedIds
+  } = useDataTable<WithId<ProductData>>({
+    data: products ?? [],
+    searchFields: ['name', 'category', 'sku'],
+    initialSort: { key: 'name', direction: 'asc' }
+  });
+
   const categoriesQuery = useMemoFirebase(() => db ? getAllCategoriesQuery(db) : null, [db]);
   const { data: allCategories } = useCollection<CategoryData>(categoriesQuery);
   const publishedCategories = (allCategories ?? []).filter(c => c.published);
@@ -106,11 +126,6 @@ export default function ProductsAdminPage() {
   const { data: allCollections } = useCollection<CollectionData>(collectionsQuery);
   const publishedCollections = (allCollections ?? []).filter(c => c.published);
 
-  const filteredProducts = (products ?? []).filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.sku ?? '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const set = (key: keyof ProductFormState, value: any) =>
     setForm(f => ({ ...f, [key]: value }));
@@ -156,8 +171,9 @@ export default function ProductsAdminPage() {
     }
     setUploadingCount(imageFiles.length);
     try {
-      const urls = await Promise.all(imageFiles.map(f => uploadImage(f, 'pehnava/products')));
-      setForm(f => ({ ...f, images: [...f.images, ...urls] }));
+      const results = await Promise.all(imageFiles.map(f => uploadImage(f, 'pehnava/products')));
+      const urls = results.map(r => r.url);
+      setForm(prev => ({ ...prev, images: [...prev.images, ...urls] }));
     } catch {
       toast({ variant: 'destructive', title: 'Upload failed', description: 'One or more images could not be uploaded.' });
     } finally {
@@ -263,6 +279,51 @@ export default function ProductsAdminPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} products?`)) return;
+    
+    setIsDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => deleteProduct(db, id)));
+      toast({ title: 'Products deleted', description: `${selectedIds.size} items removed.` });
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Bulk delete failed', description: e.message });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkTogglePublished = async (published: boolean) => {
+    if (selectedIds.size === 0) return;
+    setIsSaving(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => updateProduct(db, id, { published })));
+      toast({ title: 'Status updated', description: `${selectedIds.size} products ${published ? 'published' : 'hidden'}.` });
+      setSelectedIds(new Set());
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Bulk update failed', description: e.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const exportData = filteredData.map(p => ({
+      Name: p.name,
+      SKU: p.sku || '',
+      Category: p.category,
+      Price: p.price,
+      OriginalPrice: p.originalPrice || '',
+      Stock: p.stock || 0,
+      Published: p.published ? 'Yes' : 'No',
+      Featured: [p.isNew && 'New', p.isSale && 'Sale', p.isBestseller && 'Bestseller'].filter(Boolean).join(', '),
+      CreatedAt: formatProductDate(p.createdAt)
+    }));
+    exportToCSV(exportData, 'pehnava_products');
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -282,18 +343,62 @@ export default function ProductsAdminPage() {
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or category..."
-              className="pl-12 h-12 border-none bg-slate-50 focus-visible:ring-primary/20 rounded-2xl text-sm"
+              placeholder="Search by name, category or SKU..."
+              className="pl-12 h-12 border-none bg-slate-50 focus-visible:ring-primary/20 rounded-2xl text-xs font-semibold"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="rounded-2xl h-12 px-6 border-slate-100 gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0">
-            <Filter className="h-4 w-4" />
-            {isLoading ? '—' : `${(products ?? []).length} Products`}
-          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="rounded-2xl h-12 px-6 border-slate-100 gap-2 font-bold text-[10px] uppercase tracking-widest shrink-0">
+                  <Filter className="h-4 w-4" />
+                  Filter
+                  {filters.length > 0 && <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full bg-primary text-white">{filters.length}</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 rounded-2xl p-4 shadow-2xl border-slate-100" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest">Advanced Filters</h4>
+                    <Button variant="ghost" size="sm" onClick={() => { setFilter('published', null); setFilter('category', null); }} className="h-7 text-[9px] font-bold uppercase underline">Reset</Button>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Visibility</Label>
+                      <div className="flex gap-2">
+                        <Button variant={filters.find(f => f.key === 'published')?.value === true ? 'default' : 'outline'} size="sm" className="flex-1 rounded-lg text-[9px] font-bold uppercase" onClick={() => setFilter('published', true, 'boolean')}>Published</Button>
+                        <Button variant={filters.find(f => f.key === 'published')?.value === false ? 'default' : 'outline'} size="sm" className="flex-1 rounded-lg text-[9px] font-bold uppercase" onClick={() => setFilter('published', false, 'boolean')}>Drafts</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV}
+              className="rounded-2xl h-12 px-6 border-slate-100 gap-2 font-bold text-[10px] uppercase tracking-widest"
+            >
+              <Upload className="h-4 w-4 rotate-180" />
+              Export
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <BulkActionToolbar 
+        selectedCount={selectedIds.size}
+        onClear={() => setSelectedIds(new Set())}
+        actions={[
+          { label: 'Publish', icon: <Check className="h-3 w-3" />, onClick: () => handleBulkTogglePublished(true) },
+          { label: 'Hide', icon: <X className="h-3 w-3" />, onClick: () => handleBulkTogglePublished(false) },
+          { label: 'Delete', icon: <Trash2 className="h-3 w-3" />, onClick: handleBulkDelete, variant: 'destructive' }
+        ]}
+      />
 
       {/* Table */}
       <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
@@ -302,151 +407,162 @@ export default function ProductsAdminPage() {
             <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
           </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="hover:bg-transparent border-slate-50">
-                <TableHead className="px-8 text-[10px] font-bold uppercase tracking-widest text-slate-400 py-6">Product</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Category</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Collections</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Price</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tags</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Added</TableHead>
-                <TableHead className="px-8 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length > 0 ? filteredProducts.map(product => (
-                <TableRow key={product.id} className="hover:bg-slate-50/50 border-slate-50 transition-colors group">
-                  <TableCell className="px-8 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative h-16 w-12 rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-sm border border-slate-100">
-                        {product.image
-                          ? <Image src={product.image} alt={product.name} fill className="object-cover" />
-                          : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-slate-300" /></div>
-                        }
-                        {(product.images?.length ?? 0) > 1 && (
-                          <span className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] font-bold px-1 py-0.5 rounded-tl-lg">
-                            +{(product.images?.length ?? 1) - 1}
-                          </span>
-                        )}
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow className="hover:bg-transparent border-slate-50">
+                  <TableHead className="w-12 px-8">
+                    <Checkbox 
+                      checked={selectedIds.size === filteredData.length && filteredData.length > 0}
+                      onCheckedChange={() => toggleSelectAll()}
+                      className="rounded-md border-slate-300"
+                    />
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-slate-400 py-6"
+                    onClick={() => toggleSort('name')}
+                  >
+                    Product {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Category</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Collections</TableHead>
+                  <TableHead 
+                    className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                    onClick={() => toggleSort('price')}
+                  >
+                    Price {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Flags</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</TableHead>
+                  <TableHead 
+                    className="cursor-pointer text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                    onClick={() => toggleSort('createdAt')}
+                  >
+                    Added {sortConfig.key === 'createdAt' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="px-8 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.length > 0 ? filteredData.map(product => (
+                  <TableRow key={product.id} className={cn(
+                    "hover:bg-slate-50/50 border-slate-50 transition-colors group",
+                    selectedIds.has(product.id) && "bg-primary/5 hover:bg-primary/5"
+                  )}>
+                    <TableCell className="px-8">
+                      <Checkbox 
+                        checked={selectedIds.has(product.id)}
+                        onCheckedChange={() => toggleSelect(product.id)}
+                        className="rounded-md border-slate-300"
+                      />
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-4 min-w-[200px]">
+                        <div className="relative h-16 w-12 rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-sm border border-slate-100">
+                          {product.image
+                            ? <Image src={product.image} alt={product.name} fill className="object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-slate-300" /></div>
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate text-slate-900 font-headline group-hover:text-primary transition-colors">{product.name}</p>
+                          <p className="text-[9px] text-slate-400 tracking-wider mt-0.5">{product.sku || product.slug}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold truncate text-slate-900 font-headline group-hover:text-primary transition-colors">{product.name}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">/{product.slug}</p>
-                        {product.sku && (
-                          <p className="text-[9px] font-mono text-slate-400 tracking-wider mt-0.5">{product.sku}</p>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-widest border-slate-200">
-                      {product.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {(product.collections?.length ?? 0) > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {product.collections!.slice(0, 2).map(slug => (
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-widest border-slate-200 whitespace-nowrap">
+                        {product.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 min-w-[100px]">
+                        {product.collections?.slice(0, 1).map(slug => (
                           <Badge key={slug} className="bg-violet-100 text-violet-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">
                             {slug}
                           </Badge>
                         ))}
-                        {product.collections!.length > 2 && (
+                        {(product.collections?.length ?? 0) > 1 && (
                           <Badge className="bg-slate-100 text-slate-500 rounded-full px-2 text-[9px] font-bold border-none">
-                            +{product.collections!.length - 2}
+                            +{(product.collections?.length ?? 0) - 1}
                           </Badge>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 font-medium">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-900">₹{product.price.toLocaleString()}</span>
-                      {product.originalPrice && (
-                        <span className="text-[10px] text-muted-foreground line-through">₹{product.originalPrice.toLocaleString()}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {product.isSale && <Badge className="bg-amber-100 text-amber-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">Sale</Badge>}
-                      {product.isNew && <Badge className="bg-blue-100 text-blue-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">New</Badge>}
-                      {product.isBestseller && <Badge className="bg-purple-100 text-purple-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">Best</Badge>}
-                      {!product.isSale && !product.isNew && !product.isBestseller && (
-                        <Badge className="bg-slate-100 text-slate-400 rounded-full px-2 text-[9px] font-bold uppercase border-none">—</Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${product.published ? 'bg-green-500' : 'bg-slate-300'}`} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                        {product.published ? 'Live' : 'Draft'}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-[11px] font-medium text-slate-500">
-                    {formatProductDate(product.createdAt)}
-                  </TableCell>
-                  <TableCell className="px-8 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 rounded-xl p-2">
-                        <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1.5">Manage</DropdownMenuLabel>
-                        <DropdownMenuItem asChild className="rounded-lg gap-2 cursor-pointer">
-                          <Link href={`/products/${product.slug}`} target="_blank">
-                            <Eye className="h-4 w-4 text-slate-400" />
-                            <span className="text-xs font-medium">View on Site</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => openEdit(product)}>
-                          <Edit2 className="h-4 w-4 text-slate-400" />
-                          <span className="text-xs font-medium">Edit Product</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="my-1 bg-slate-100" />
-                        <DropdownMenuItem
-                          className="rounded-lg gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                          onClick={() => setDeletingId(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="text-xs font-bold">Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-64 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                      <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-slate-200" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col min-w-[80px]">
+                        <span className="text-sm font-bold text-slate-900">₹{product.price.toLocaleString()}</span>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold">{searchTerm ? 'No products found' : 'No products yet'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {searchTerm ? 'Try a different search term.' : 'Add your first product to get started.'}
-                        </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 min-w-[100px]">
+                        {product.isSale && <Badge className="bg-amber-100 text-amber-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">Sale</Badge>}
+                        {product.isNew && <Badge className="bg-blue-100 text-blue-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">New</Badge>}
+                        {product.isBestseller && <Badge className="bg-purple-100 text-purple-700 rounded-full px-2 text-[9px] font-bold uppercase border-none">Best</Badge>}
                       </div>
-                      {!searchTerm && (
-                        <Button onClick={openAdd} variant="outline" className="rounded-full h-10 px-6 font-bold uppercase text-[10px] tracking-widest border-slate-200">
-                          Add First Product
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 min-w-[80px]">
+                        <div className={`w-2 h-2 rounded-full ${product.published ? 'bg-green-500' : 'bg-slate-300'}`} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                          {product.published ? 'Live' : 'Draft'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                      {formatProductDate(product.createdAt)}
+                    </TableCell>
+                    <TableCell className="px-8 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-slate-100">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl p-2">
+                          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1.5">Manage</DropdownMenuLabel>
+                          <DropdownMenuItem asChild className="rounded-lg gap-2 cursor-pointer">
+                            <Link href={`/products/${product.slug}`} target="_blank">
+                              <Eye className="h-4 w-4 text-slate-400" />
+                              <span className="text-xs font-medium">View on Site</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="rounded-lg gap-2 cursor-pointer" onClick={() => openEdit(product)}>
+                            <Edit2 className="h-4 w-4 text-slate-400" />
+                            <span className="text-xs font-medium">Edit Product</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="my-1 bg-slate-100" />
+                          <DropdownMenuItem
+                            className="rounded-lg gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                            onClick={() => setDeletingId(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="text-xs font-bold">Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-64 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                        <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center">
+                          <Package className="h-8 w-8 text-slate-200" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold">{searchTerm ? 'No products found' : 'No products yet'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {searchTerm ? 'Try a different search term.' : 'Add your first product to get started.'}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
 

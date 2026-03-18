@@ -16,6 +16,9 @@ export type HeroSlideData = {
   description: string;
   tag: string;
   imageUrl: string;
+  imagePublicId?: string; // For Cloudinary cleanup
+  videoUrl?: string;
+  videoPublicId?: string; // For Cloudinary cleanup
   href: string;
   ctaLabel: string;
   order: number;

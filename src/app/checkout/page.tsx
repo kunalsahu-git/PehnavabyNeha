@@ -146,7 +146,7 @@ export default function CheckoutPage() {
                       <Input 
                         id="name" 
                         required 
-                        placeholder="Neha Sharma"
+                        placeholder="Enter your full name"
                         className="rounded-xl h-12"
                         value={address.name}
                         onChange={(e) => setAddress({...address, name: e.target.value})}
@@ -157,7 +157,7 @@ export default function CheckoutPage() {
                       <Input 
                         id="phone" 
                         required 
-                        placeholder="+91 98765 43210"
+                        placeholder="e.g. +91 98765 43210"
                         className="rounded-xl h-12"
                         value={address.phone}
                         onChange={(e) => setAddress({...address, phone: e.target.value})}
@@ -168,7 +168,7 @@ export default function CheckoutPage() {
                       <Input 
                         id="address" 
                         required 
-                        placeholder="45A, Rose Avenue"
+                        placeholder="Enter house number and street name"
                         className="rounded-xl h-12"
                         value={address.line1}
                         onChange={(e) => setAddress({...address, line1: e.target.value})}
@@ -179,7 +179,7 @@ export default function CheckoutPage() {
                       <Input 
                         id="city" 
                         required 
-                        placeholder="Jaipur"
+                        placeholder="Enter your city"
                         className="rounded-xl h-12"
                         value={address.city}
                         onChange={(e) => setAddress({...address, city: e.target.value})}
@@ -190,7 +190,7 @@ export default function CheckoutPage() {
                       <Input 
                         id="pincode" 
                         required 
-                        placeholder="302001"
+                        placeholder="6-digit pincode"
                         className="rounded-xl h-12"
                         value={address.pincode}
                         onChange={(e) => setAddress({...address, pincode: e.target.value})}

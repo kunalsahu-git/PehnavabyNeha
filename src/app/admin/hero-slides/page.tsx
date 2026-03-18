@@ -27,13 +27,17 @@ import {
   getAllHeroSlidesQuery, createHeroSlide, updateHeroSlide, deleteHeroSlide,
   reorderHeroSlide, type HeroSlideData,
 } from '@/firebase/firestore/hero_slides';
-import { ImageUploader } from '@/components/ImageUploader';
+import { FileUploader } from '@/components/FileUploader';
+import { deleteFile } from '@/lib/cloudinary';
 
 const EMPTY_FORM = {
   title: '',
   description: '',
   tag: '',
   imageUrl: '',
+  imagePublicId: '',
+  videoUrl: '',
+  videoPublicId: '',
   href: '',
   ctaLabel: 'Shop Now',
   order: 0,
@@ -70,6 +74,9 @@ export default function HeroSlidesAdminPage() {
       description: slide.description ?? '',
       tag: slide.tag ?? '',
       imageUrl: slide.imageUrl ?? '',
+      imagePublicId: slide.imagePublicId ?? '',
+      videoUrl: slide.videoUrl ?? '',
+      videoPublicId: slide.videoPublicId ?? '',
       href: slide.href,
       ctaLabel: slide.ctaLabel ?? 'Shop Now',
       order: slide.order ?? 0,
@@ -88,31 +95,31 @@ export default function HeroSlidesAdminPage() {
       toast({ variant: 'destructive', title: 'Required fields missing', description: 'Title and destination URL are required.' });
       return;
     }
+    if (!form.imageUrl && !form.videoUrl) {
+      toast({ variant: 'destructive', title: 'Media required', description: 'Please upload at least an image or a video.' });
+      return;
+    }
     setIsSaving(true);
     try {
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        tag: form.tag.trim(),
+        imageUrl: form.imageUrl.trim(),
+        imagePublicId: form.imagePublicId.trim(),
+        videoUrl: form.videoUrl.trim(),
+        videoPublicId: form.videoPublicId.trim(),
+        href: form.href.trim(),
+        ctaLabel: form.ctaLabel.trim() || 'Shop Now',
+        order: Number(form.order),
+        published: form.published,
+      };
+
       if (editingSlide) {
-        await updateHeroSlide(db, editingSlide.id, {
-          title: form.title.trim(),
-          description: form.description.trim(),
-          tag: form.tag.trim(),
-          imageUrl: form.imageUrl.trim(),
-          href: form.href.trim(),
-          ctaLabel: form.ctaLabel.trim() || 'Shop Now',
-          order: Number(form.order),
-          published: form.published,
-        });
+        await updateHeroSlide(db, editingSlide.id, payload);
         toast({ title: 'Slide Updated', description: `"${form.title}" saved.` });
       } else {
-        await createHeroSlide(db, {
-          title: form.title.trim(),
-          description: form.description.trim(),
-          tag: form.tag.trim(),
-          imageUrl: form.imageUrl.trim(),
-          href: form.href.trim(),
-          ctaLabel: form.ctaLabel.trim() || 'Shop Now',
-          order: Number(form.order),
-          published: form.published,
-        });
+        await createHeroSlide(db, payload);
         toast({ title: 'Slide Created', description: `"${form.title}" added to the carousel.` });
       }
       closeSheet();
@@ -127,8 +134,21 @@ export default function HeroSlidesAdminPage() {
     if (!deletingSlide) return;
     setIsDeleting(true);
     try {
+      // ── Cloudinary Cleanup ────────────────────────────────────────────────
+      const deletePromises = [];
+      if (deletingSlide.imagePublicId) {
+        deletePromises.push(deleteFile(deletingSlide.imagePublicId, 'image').catch(err => console.error('Cloudinary image delete error:', err)));
+      }
+      if (deletingSlide.videoPublicId) {
+        deletePromises.push(deleteFile(deletingSlide.videoPublicId, 'video').catch(err => console.error('Cloudinary video delete error:', err)));
+      }
+      if (deletePromises.length > 0) {
+        await Promise.all(deletePromises);
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
       await deleteHeroSlide(db, deletingSlide.id);
-      toast({ title: 'Slide Deleted', description: `"${deletingSlide.title}" removed.` });
+      toast({ title: 'Slide Deleted', description: `"${deletingSlide.title}" removed from database and Cloudinary.` });
       setDeletingSlide(null);
     } catch {
       toast({ variant: 'destructive', title: 'Delete Failed' });
@@ -157,7 +177,7 @@ export default function HeroSlidesAdminPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl font-headline font-bold uppercase tracking-wider text-primary">Hero Carousel</h1>
-          <p className="text-sm text-muted-foreground">Manage the rotating banner slides shown at the top of your homepage.</p>
+          <p className="text-sm text-muted-foreground">Manage the rotating banner slides (Image or Video) shown at the top of your homepage.</p>
         </div>
         <Button
           onClick={openCreate}
@@ -200,9 +220,9 @@ export default function HeroSlidesAdminPage() {
           <div className="absolute inset-0 bg-gradient-to-tr from-primary/40 to-transparent" />
           <div className="relative space-y-2">
             <h4 className="text-lg font-headline font-bold text-white uppercase tracking-widest leading-snug">
-              Landscape<br />images work best
+              Video or<br />Landscape Image
             </h4>
-            <p className="text-xs text-white/50 leading-relaxed">Slides display at 45vh height — use wide images (1400×600px recommended).</p>
+            <p className="text-xs text-white/50 leading-relaxed">Videos show play/pause controls. Images auto-transition every 5s.</p>
           </div>
         </div>
       </div>
@@ -248,8 +268,10 @@ export default function HeroSlidesAdminPage() {
               </div>
 
               {/* Thumbnail */}
-              <div className="relative h-16 w-28 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                {slide.imageUrl ? (
+              <div className="relative h-16 w-28 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-100">
+                {slide.videoUrl ? (
+                   <video src={slide.videoUrl} className="w-full h-full object-cover" muted playsInline />
+                ) : slide.imageUrl ? (
                   <Image src={slide.imageUrl} alt={slide.title} fill className="object-cover" />
                 ) : (
                   <div className="flex items-center justify-center h-full">
@@ -268,6 +290,11 @@ export default function HeroSlidesAdminPage() {
                   )}>
                     {slide.published ? 'Live' : 'Draft'}
                   </Badge>
+                  {slide.videoUrl && (
+                    <Badge className="bg-blue-100 text-blue-600 rounded-full text-[9px] uppercase tracking-widest border-none shrink-0">
+                      Video
+                    </Badge>
+                  )}
                 </div>
                 {slide.tag && (
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{slide.tag}</p>
@@ -294,7 +321,7 @@ export default function HeroSlidesAdminPage() {
 
       {/* Create / Edit Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={open => { if (!open) closeSheet(); }}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
+        <SheetContent className="sm:max-w-lg overflow-y-auto no-scrollbar">
           <SheetHeader className="pb-6 border-b">
             <div className="text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
               {editingSlide ? 'Editing Slide' : 'New Slide'}
@@ -307,92 +334,131 @@ export default function HeroSlidesAdminPage() {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="py-8 space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Title <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="e.g. Elegance Redefined"
-                value={form.title}
-                onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
-                className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
-              />
+          <div className="py-8 space-y-8">
+            {/* Basic Info */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Title <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="e.g. Elegance Redefined"
+                  value={form.title}
+                  onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Tag / Label
+                  </Label>
+                  <Input
+                    placeholder="e.g. Collection 2025"
+                    value={form.tag}
+                    onChange={e => setForm(prev => ({ ...prev, tag: e.target.value }))}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Display Order
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.order}
+                    onChange={e => setForm(prev => ({ ...prev, order: Number(e.target.value) }))}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Description
+                </Label>
+                <textarea
+                  placeholder="Short subtitle displayed under the title..."
+                  value={form.description}
+                  onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full min-h-[80px] rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-sm outline-none ring-2 ring-transparent focus:ring-primary/20 transition-all resize-none"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Tag / Label
-              </Label>
-              <Input
-                placeholder="e.g. Collection 2025"
-                value={form.tag}
-                onChange={e => setForm(prev => ({ ...prev, tag: e.target.value }))}
-                className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
-              />
-              <p className="text-[10px] text-muted-foreground">Small uppercase label shown above the title.</p>
+            <Separator />
+
+            {/* Links */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Destination URL <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="/collections/new-arrivals"
+                  value={form.href}
+                  onChange={e => setForm(prev => ({ ...prev, href: e.target.value }))}
+                  className="h-12 rounded-xl border-slate-100 bg-slate-50/50 font-mono text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  CTA Button Label
+                </Label>
+                <Input
+                  placeholder="Shop Now"
+                  value={form.ctaLabel}
+                  onChange={e => setForm(prev => ({ ...prev, ctaLabel: e.target.value }))}
+                  className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Description
-              </Label>
-              <textarea
-                placeholder="Short subtitle displayed under the title..."
-                value={form.description}
-                onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full min-h-[80px] rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-sm outline-none ring-2 ring-transparent focus:ring-primary/20 transition-all resize-none"
-              />
-            </div>
+            <Separator />
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Destination URL <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="/collections/new-arrivals"
-                value={form.href}
-                onChange={e => setForm(prev => ({ ...prev, href: e.target.value }))}
-                className="h-12 rounded-xl border-slate-100 bg-slate-50/50 font-mono text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">Where the primary CTA button links to.</p>
-            </div>
+            {/* Media */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Banner Layout Content
+                </Label>
+                <p className="text-[10px] text-muted-foreground italic">You can upload an image OR a video. If both exist, video takes precedence on the homepage.</p>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-tight text-slate-400">Background Image</Label>
+                    <FileUploader
+                      type="image"
+                      value={form.imageUrl}
+                      onChange={res => setForm(prev => ({ 
+                        ...prev, 
+                        imageUrl: res?.url || '', 
+                        imagePublicId: res?.publicId || '' 
+                      }))}
+                      folder="pehnava/hero/images"
+                      label="Select Banner Image"
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                CTA Button Label
-              </Label>
-              <Input
-                placeholder="Shop Now"
-                value={form.ctaLabel}
-                onChange={e => setForm(prev => ({ ...prev, ctaLabel: e.target.value }))}
-                className="h-12 rounded-xl border-slate-100 bg-slate-50/50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Display Order
-              </Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.order}
-                onChange={e => setForm(prev => ({ ...prev, order: Number(e.target.value) }))}
-                className="h-12 rounded-xl border-slate-100 bg-slate-50/50 w-32"
-              />
-              <p className="text-[10px] text-muted-foreground">Lower numbers appear first. You can also reorder using the up/down arrows on the list.</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Banner Image
-              </Label>
-              <ImageUploader
-                value={form.imageUrl}
-                onChange={url => setForm(prev => ({ ...prev, imageUrl: url }))}
-                folder="pehnava/hero"
-              />
+                  <div className="space-y-2">
+                    <Label className="text-[9px] font-bold uppercase tracking-tight text-slate-400">Background Video (Optional)</Label>
+                    <FileUploader
+                      type="video"
+                      value={form.videoUrl}
+                      onChange={res => setForm(prev => ({ 
+                        ...prev, 
+                        videoUrl: res?.url || '', 
+                        videoPublicId: res?.publicId || '' 
+                      }))}
+                      folder="pehnava/hero/videos"
+                      label="Select Banner Video"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Separator />
@@ -427,7 +493,7 @@ export default function HeroSlidesAdminPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-headline text-2xl uppercase">Delete Slide?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              This will permanently delete <span className="font-bold text-foreground">"{deletingSlide?.title}"</span> from the carousel.
+              This will permanently delete <span className="font-bold text-foreground">"{deletingSlide?.title}"</span> from the carousel. The assets will also be removed from Cloudinary.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -32,6 +32,8 @@ import { doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 
+const SHOW_SEED_DATA = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
 const ADMIN_NAV = [
   { name: 'Overview', href: '/admin', icon: LayoutDashboard },
   { name: 'Orders', href: '/admin/orders', icon: ClipboardList },
@@ -44,7 +46,7 @@ const ADMIN_NAV = [
   { name: 'Studio Reels', href: '/admin/studio-reels', icon: Film },
   { name: 'Admin Users', href: '/admin/users', icon: Users },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
-  { name: 'Seed Data', href: '/admin/seed', icon: Database },
+  ...(SHOW_SEED_DATA ? [{ name: 'Seed Data', href: '/admin/seed', icon: Database }] : []),
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -134,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1 sidebar-scrollbar">
           {ADMIN_NAV.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -188,70 +190,95 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[100]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[100] border-b border-white/10">
         <Link href="/admin" className="flex flex-col">
-          <span className="text-xl font-headline font-bold">PEHNAVA</span>
-          <span className="text-[8px] tracking-[0.3em] text-accent uppercase">Admin</span>
+          <span className="text-xl font-headline font-bold tracking-tight">PEHNAVA</span>
+          <span className="text-[8px] tracking-[0.3em] text-accent uppercase font-bold">Admin Panel</span>
         </Link>
-        <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-          {isSidebarOpen ? <X /> : <Menu />}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="hover:bg-white/10 rounded-xl"
+        >
+          {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col pt-16 lg:pt-0">
-        {isDevBypass && (
-          <div className="bg-amber-50 border-b border-amber-100 p-3 flex items-center justify-center gap-3">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700">
-              Development Mode: Admin Access Granted without Firestore Role Verification
-            </span>
+      {/* Mobile Nav Overlay/Drawer */}
+      <div 
+        className={cn(
+          "lg:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[90] transition-all duration-300",
+          isSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )} 
+        onClick={() => setIsSidebarOpen(false)}
+      >
+        <aside 
+          className={cn(
+            "w-[280px] h-full bg-slate-900 shadow-2xl transition-transform duration-300 ease-in-out",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="p-8 border-b border-white/5">
+            <Link href="/admin" onClick={() => setIsSidebarOpen(false)} className="flex flex-col">
+              <span className="text-2xl font-headline font-bold text-white tracking-tighter">PEHNAVA</span>
+              <span className="text-[9px] font-headline font-medium tracking-[0.4em] text-accent uppercase">Boutique Admin</span>
+            </Link>
           </div>
-        )}
-        <div className="p-4 md:p-8 lg:p-12">
-          {children}
-        </div>
-      </main>
 
-      {/* Mobile Nav Overlay */}
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]" onClick={() => setIsSidebarOpen(false)}>
-          <div className="w-[80vw] h-full bg-slate-900 p-6 flex flex-col" onClick={e => e.stopPropagation()}>
-             <nav className="flex-1 space-y-2 mt-12">
-                {ADMIN_NAV.map((item) => (
-                  <Link 
-                    key={item.name} 
-                    href={item.href}
-                    onClick={() => setIsSidebarOpen(false)}
-                    className={cn(
-                      "flex items-center gap-4 p-4 rounded-2xl text-lg font-headline",
-                      pathname === item.href ? "bg-primary text-white" : "text-slate-400"
-                    )}
-                  >
-                    <item.icon className="h-6 w-6" />
-                    {item.name}
-                  </Link>
-                ))}
-                <Separator className="bg-white/10 my-4" />
+          <nav className="flex-1 overflow-y-auto p-4 space-y-1 sidebar-scrollbar mt-4 max-h-[calc(100vh-220px)]">
+            {ADMIN_NAV.map((item) => {
+              const isActive = pathname === item.href;
+              return (
                 <Link 
-                  href="/"
+                  key={item.name} 
+                  href={item.href}
                   onClick={() => setIsSidebarOpen(false)}
-                  className="flex items-center gap-4 p-4 rounded-2xl text-lg font-headline text-accent"
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-sm font-medium",
+                    isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400 hover:bg-white/5"
+                  )}
                 >
-                  <ExternalLink className="h-6 w-6" />
-                  View Website
+                  <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-slate-500")} />
+                  {item.name}
                 </Link>
-             </nav>
-             <Button 
+              );
+            })}
+          </nav>
+
+          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-white/5 bg-slate-900 space-y-4">
+            <Button 
               onClick={handleLogout}
               variant="outline" 
-              className="mt-auto border-white/10 text-white rounded-2xl h-14"
+              className="w-full border-white/10 text-white hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 h-12 rounded-xl text-xs font-bold uppercase tracking-widest"
             >
+              <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>
+        </aside>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Warning Banner for Bypass (Optional) */}
+        {isDevBypass && (
+          <div className="bg-amber-50 border-b border-amber-100 px-8 py-3 flex items-center gap-3 shrink-0 mt-16 lg:mt-0">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <p className="text-[10px] font-bold text-amber-800 uppercase tracking-widest">
+              Development Bypass Active: No role found in `roles_admin`. Permissions limited.
+            </p>
+          </div>
+        )}
+
+        <div className={cn(
+          "flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto",
+          !isDevBypass && "mt-16 lg:mt-0"
+        )}>
+          {children}
         </div>
-      )}
+      </main>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight, Truck, RefreshCw, MessageSquare, ShieldCheck,
-  Minus, Plus, RotateCcw, Banknote, Lock, MapPin, Instagram, Play,
+  Minus, Plus, RotateCcw, Banknote, Lock, MapPin, Instagram, Play, X, Loader2
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import Autoplay from "embla-carousel-autoplay";
 import { useCart } from "@/context/CartContext";
 import { motion } from "framer-motion";
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { getAllCategoriesQuery, type CategoryData } from "@/firebase/firestore/categories";
 import { getNewArrivalsQuery, getSaleProductsQuery, type ProductData } from "@/firebase/firestore/products";
 import { getPublishedHeroSlidesQuery, type HeroSlideData } from "@/firebase/firestore/hero_slides";
@@ -33,7 +33,7 @@ const HERO_SLIDES = [
     id: 1, title: 'Elegance Redefined',
     description: "Discover curated pieces that celebrate the modern woman's heritage.",
     image: PlaceHolderImages.find(i => i.id === 'hero-1'),
-    tag: 'Collection 2025', href: '/collections/new-arrivals',
+    tag: 'Collection 2025', href: '/shop',
   },
   {
     id: 2, title: 'The Wedding Edit',
@@ -69,11 +69,11 @@ const FEATURED_PRODUCT = {
 
 // TODO: Studio Stories — build a "studio_reels" collection in Firestore
 const REELS = [
-  { id: 1, title: 'Boutique BTS', tag: '#StudioVibes', image: PlaceHolderImages.find(i => i.id === 'reel-1') },
-  { id: 2, title: 'Styling the Silk', tag: '#NehaStyles', image: PlaceHolderImages.find(i => i.id === 'reel-3') },
-  { id: 3, title: 'Happy Customer', tag: '#PehnavaFamily', image: PlaceHolderImages.find(i => i.id === 'reel-2') },
-  { id: 4, title: 'Jaipur Diaries', tag: '#Heritage', image: PlaceHolderImages.find(i => i.id === 'cat-ethnic') },
-  { id: 5, title: 'Fusion Friday', tag: '#ModernEthnic', image: PlaceHolderImages.find(i => i.id === 'reel-1') },
+  { id: 1, title: 'Boutique BTS', tag: '#StudioVibes', image: PlaceHolderImages.find(i => i.id === 'reel-1'), videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
+  { id: 2, title: 'Styling the Silk', tag: '#NehaStyles', image: PlaceHolderImages.find(i => i.id === 'reel-3'), videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
+  { id: 3, title: 'Happy Customer', tag: '#PehnavaFamily', image: PlaceHolderImages.find(i => i.id === 'reel-2'), videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' },
+  { id: 4, title: 'Jaipur Diaries', tag: '#Heritage', image: PlaceHolderImages.find(i => i.id === 'cat-ethnic'), videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4' },
+  { id: 5, title: 'Fusion Friday', tag: '#ModernEthnic', image: PlaceHolderImages.find(i => i.id === 'reel-1'), videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4' },
 ];
 
 // Static fallback for categories grid — used while Firestore loads or if empty
@@ -106,6 +106,8 @@ export default function Home() {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
   const { addItem } = useCart();
   const db = useFirestore();
 
@@ -127,7 +129,7 @@ export default function Home() {
   const { data: saleData } = useCollection<ProductData>(saleQuery);
 
   // Hero slides
-  const heroSlidesQuery = useMemoFirebase(() => db ? getPublishedHeroSlidesQuery(db) : null, [db]);
+  const heroSlidesQuery = useMemoFirebase(() => db ? query(collection(db, 'hero_slides'), where('published', '==', true)) : null, [db]);
   const { data: heroSlidesData } = useCollection<HeroSlideData>(heroSlidesQuery);
 
   // Studio reels
@@ -155,7 +157,10 @@ export default function Home() {
   const categoryGrid = publishedCategories.length > 0 ? publishedCategories : FALLBACK_CATEGORIES;
   const newArrivals = publishedNewArrivals.length > 0 ? publishedNewArrivals : FALLBACK_NEW_ARRIVALS;
   const saleProducts = publishedSale.length > 0 ? publishedSale : FALLBACK_SALE;
-  const heroSlides = (heroSlidesData ?? []).length > 0 ? heroSlidesData! : HERO_SLIDES;
+  
+  const heroSlides = (heroSlidesData ?? []).length > 0 
+    ? [...heroSlidesData!].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) 
+    : HERO_SLIDES;
   const reels = (reelsData ?? []).length > 0 ? reelsData! : REELS;
   // Featured product — merge Firestore fields into FEATURED_PRODUCT shape for the existing JSX
   const fp = firestoreFeaturedProduct
@@ -176,18 +181,61 @@ export default function Home() {
           : [firestoreFeaturedProduct.image, ...FEATURED_PRODUCT.images].filter(Boolean),
       }
     : FEATURED_PRODUCT;
-  // ─────────────────────────────────────────────────────────────────────────
+  const [isHeroVideoPlaying, setIsHeroVideoPlaying] = useState(true);
+  const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
   const autoplayHero = useRef(Autoplay({ delay: 5000, stopOnInteraction: false }));
   const autoplayArrivals = useRef(Autoplay({ delay: 3500, stopOnInteraction: false }));
   const autoplaySale = useRef(Autoplay({ delay: 4000, stopOnInteraction: false }));
 
+  // Handle Hero Autoplay logic based on video
+  useEffect(() => {
+    if (!api) return;
+    
+    const currentSlide = heroSlides[current];
+    const isVideoSlide = !!(currentSlide as any).videoUrl;
+
+    if (isVideoSlide) {
+      // Pause carousel autoplay if it's a video slide
+      autoplayHero.current.stop();
+      
+      const video = videoRefs.current[current];
+      if (video) {
+        if (isHeroVideoPlaying) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    } else {
+      // Resume carousel autoplay for image slides
+      autoplayHero.current.reset();
+      autoplayHero.current.play();
+    }
+  }, [api, current, isHeroVideoPlaying, heroSlides]);
+
   useEffect(() => {
     if (!api) return;
     setCount(api.scrollSnapList().length);
     setCurrent(api.selectedScrollSnap());
-    api.on("select", () => setCurrent(api.selectedScrollSnap()));
+    api.on("select", () => {
+      const newIndex = api.selectedScrollSnap();
+      setCurrent(newIndex);
+      // When sliding to a new video, ensure it's "playing" mode by default
+      setIsHeroVideoPlaying(true);
+    });
   }, [api]);
+
+  useEffect(() => {
+    if (playingVideoUrl) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [playingVideoUrl]);
 
   const handleFeaturedAddToCart = () => {
     addItem({
@@ -200,47 +248,124 @@ export default function Home() {
   return (
     <div className="flex flex-col w-full overflow-hidden">
 
-      {/* ── Hero Carousel — STATIC (TODO: build HeroSlides backend) ─────────── */}
-      <section className="relative h-[45vh] md:h-[50vh] w-full bg-secondary overflow-hidden">
+      {/* ── Hero Carousel ─────────────────────────────────────────────────── */}
+      <section className="relative h-[55vh] md:h-[70vh] w-full bg-secondary overflow-hidden">
         <Carousel setApi={setApi} opts={{ loop: true }} plugins={[autoplayHero.current]} className="h-full w-full">
           <CarouselContent className="h-full ml-0">
             {heroSlides.map((slide, idx) => {
-              // Support both Firestore shape (imageUrl string) and static fallback shape (image object)
               const imgUrl = (slide as any).imageUrl || (slide as any).image?.imageUrl || '';
+              const videoUrl = (slide as any).videoUrl || null;
               const slideHref = (slide as any).href || '/collections/new-arrivals';
               const ctaLabel = (slide as any).ctaLabel || 'Shop Now';
+              const isCurrent = current === idx;
+
               return (
                 <CarouselItem key={(slide as any).id ?? idx} className="h-full p-0">
-                  <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-                    <Image src={imgUrl} alt={slide.title} fill className="object-cover brightness-[0.65]" priority={idx === 0} />
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
-                    <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-3 md:space-y-4">
-                      <span className="text-xs font-bold tracking-[0.4em] uppercase opacity-90">{slide.tag}</span>
-                      <h1 className="text-3xl md:text-6xl font-headline font-bold leading-tight">{slide.title}</h1>
-                      <p className="text-sm md:text-lg font-light max-w-xl mx-auto opacity-95 line-clamp-2">{slide.description}</p>
-                      <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Button size="lg" asChild className="bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-12 px-8 rounded-full font-bold w-full sm:w-auto shadow-xl">
+                  <div className="relative h-full w-full flex items-center justify-center overflow-hidden bg-black">
+                    {videoUrl ? (
+                      <video 
+                        ref={el => { videoRefs.current[idx] = el; }}
+                        src={videoUrl}
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-1000"
+                        autoPlay
+                        muted
+                        playsInline
+                        loop={false}
+                        onEnded={() => {
+                          if (isCurrent) api?.scrollNext();
+                        }}
+                      />
+                    ) : (
+                      <Image 
+                        src={imgUrl} 
+                        alt={slide.title} 
+                        fill 
+                        className="object-cover brightness-[0.65] transition-transform duration-[10s] ease-linear group-hover:scale-110" 
+                        priority={idx === 0} 
+                      />
+                    )}
+                    
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+                    
+                    <div className="relative z-10 text-center text-white px-4 max-w-4xl space-y-4 md:space-y-6">
+                      <motion.span 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={isCurrent ? { opacity: 0.9, y: 0 } : {}}
+                        transition={{ delay: 0.2 }}
+                        className="text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase"
+                      >
+                        {slide.tag}
+                      </motion.span>
+                      
+                      <motion.h1 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={isCurrent ? { opacity: 1, y: 0 } : {}}
+                        transition={{ delay: 0.4 }}
+                        className="text-4xl md:text-7xl font-headline font-bold leading-[1.1] tracking-tight"
+                      >
+                        {slide.title}
+                      </motion.h1>
+                      
+                      <motion.p 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={isCurrent ? { opacity: 0.95, y: 0 } : {}}
+                        transition={{ delay: 0.6 }}
+                        className="text-sm md:text-xl font-light max-w-xl mx-auto opacity-95 line-clamp-2 leading-relaxed"
+                      >
+                        {slide.description}
+                      </motion.p>
+                      
+                      <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={isCurrent ? { opacity: 1, y: 0 } : {}}
+                        transition={{ delay: 0.8 }}
+                        className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4"
+                      >
+                        <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 h-12 md:h-14 px-10 rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all hover:scale-105 active:scale-95">
                           <Link href={slideHref}>{ctaLabel}</Link>
                         </Button>
-                        <Button size="lg" variant="outline" asChild className="border-2 border-white text-white bg-white/10 hover:bg-white hover:text-primary h-11 md:h-12 px-8 rounded-full w-full sm:w-auto backdrop-blur-sm shadow-xl font-bold">
+                        <Button size="lg" variant="outline" asChild className="border-2 border-white/30 text-white bg-white/5 hover:bg-white hover:text-primary h-12 md:h-14 px-10 rounded-full w-full sm:w-auto backdrop-blur-md shadow-xl font-bold transition-all hover:border-white">
                           <Link href="/collections/new-arrivals">View Lookbook</Link>
                         </Button>
-                      </div>
+                      </motion.div>
                     </div>
+
+                    {/* Video Controls Toggle */}
+                    {videoUrl && isCurrent && (
+                      <div className="absolute bottom-10 right-10 z-30 flex items-center gap-3">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => setIsHeroVideoPlaying(!isHeroVideoPlaying)}
+                          className="h-12 w-12 rounded-full border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-white hover:text-black transition-all"
+                        >
+                          {isHeroVideoPlaying ? <Minus className="h-5 w-5" /> : <Play className="h-5 w-5 fill-current" />}
+                        </Button>
+                        <div className="hidden md:block text-[10px] font-bold text-white uppercase tracking-widest opacity-60">
+                          {isHeroVideoPlaying ? 'Playing' : 'Paused'}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CarouselItem>
               );
             })}
           </CarouselContent>
-          <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between pointer-events-none z-20">
-            <CarouselPrevious className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
-            <CarouselNext className="static translate-y-0 h-10 w-10 border-2 border-white/40 text-white bg-black/30 hover:bg-black/60 backdrop-blur-md pointer-events-auto" />
+          <div className="absolute inset-y-0 left-6 right-6 flex items-center justify-between pointer-events-none z-20">
+            <CarouselPrevious className="static translate-y-0 h-12 w-12 border-white/20 text-white bg-black/10 hover:bg-white hover:text-black backdrop-blur-md pointer-events-auto transition-all" />
+            <CarouselNext className="static translate-y-0 h-12 w-12 border-white/20 text-white bg-black/10 hover:bg-white hover:text-black backdrop-blur-md pointer-events-auto transition-all" />
           </div>
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-30">
-            {Array.from({ length: count }).map((_, i) => (
-              <button key={i} onClick={() => api?.scrollTo(i)}
-                className={cn("h-1.5 rounded-full transition-all duration-300", current === i ? "bg-white w-8 shadow-lg" : "bg-white/30 w-1.5")} />
-            ))}
+          <div className="absolute bottom-10 left-10 flex flex-col gap-4 z-30">
+            <div className="flex gap-2">
+              {Array.from({ length: count }).map((_, i) => (
+                <button key={i} onClick={() => api?.scrollTo(i)}
+                  className={cn(
+                    "h-1 rounded-full transition-all duration-500", 
+                    current === i ? "bg-white w-12 shadow-lg" : "bg-white/20 w-4 hover:bg-white/40"
+                  )} 
+                />
+              ))}
+            </div>
           </div>
         </Carousel>
       </section>
@@ -450,8 +575,17 @@ export default function Home() {
               // Support both Firestore shape (imageUrl string) and static fallback shape (image object)
               const imgUrl = (reel as any).imageUrl || (reel as any).image?.imageUrl || '';
               const igUrl = (reel as any).instagramUrl || (reel as any).videoUrl || null;
+              const isVideo = !!igUrl && (igUrl.includes('.mp4') || igUrl.includes('video'));
               const card = (
                 <motion.div key={(reel as any).id ?? idx} whileHover={{ y: -5 }}
+                  onClick={() => {
+                    if (isVideo) {
+                      setIsVideoLoading(true);
+                      setPlayingVideoUrl(igUrl);
+                    } else if (igUrl) {
+                      window.open(igUrl, '_blank');
+                    }
+                  }}
                   className="relative flex-shrink-0 w-[200px] md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden shadow-lg group cursor-pointer">
                   <Image src={imgUrl} alt={reel.title} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
@@ -466,13 +600,47 @@ export default function Home() {
                   </div>
                 </motion.div>
               );
-              return igUrl
-                ? <a key={(reel as any).id ?? idx} href={igUrl} target="_blank" rel="noopener noreferrer">{card}</a>
-                : <React.Fragment key={(reel as any).id ?? idx}>{card}</React.Fragment>;
+              return <React.Fragment key={(reel as any).id ?? idx}>{card}</React.Fragment>;
             })}
           </div>
         </div>
       </section>
+
+      {/* Video Overlay Modal */}
+      {playingVideoUrl && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 md:p-8 backdrop-blur-md transition-all animate-in fade-in duration-300"
+          onClick={() => setPlayingVideoUrl(null)}
+        >
+          <button 
+            onClick={(e) => { e.stopPropagation(); setPlayingVideoUrl(null); }} 
+            className="absolute top-4 right-4 md:top-8 md:right-8 z-[110] text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full backdrop-blur-md transition-colors"
+          >
+            <X className="h-6 w-6 md:h-8 md:w-8" />
+          </button>
+          <div 
+            className="relative w-full max-w-[420px] h-full max-h-[85vh] md:max-h-[90vh] bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isVideoLoading && (
+              <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/20">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+              </div>
+            )}
+            <video 
+              src={playingVideoUrl as string} 
+              autoPlay 
+              muted
+              controls 
+              playsInline 
+              className="w-full h-full object-contain"
+              onWaiting={() => setIsVideoLoading(true)}
+              onPlaying={() => setIsVideoLoading(false)}
+              onLoadedData={() => setIsVideoLoading(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Features Strip — STATIC (brand promise, no backend needed) ──────────── */}
       <section className="border-y bg-background py-12">

@@ -24,6 +24,7 @@ service cloud.firestore {
         request.auth.uid == 'c5yNNdozphYmPahMpu13nUnerVI2' ||
         request.auth.uid == 'RQxTHd3OakSJZ8HsjEPkO4jygg93' ||
         request.auth.uid == 'iyh9ADKMHYaiPZXma4iIdtiIXWE2' ||
+        request.auth.uid == 'maZagyyZZuYrbLfdJtr50zsvSLm2' ||
         exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
       );
     }

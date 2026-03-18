@@ -2,40 +2,60 @@
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
-import { Upload, X, Loader2, ImageIcon } from 'lucide-react';
+import { Upload, X, Loader2, ImageIcon, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { uploadImage } from '@/lib/cloudinary';
+import { uploadFile, type UploadResult } from '@/lib/cloudinary';
 import { cn } from '@/lib/utils';
 
-interface ImageUploaderProps {
-  value: string;
-  onChange: (url: string) => void;
+interface FileUploaderProps {
+  value?: string;
+  type?: 'image' | 'video';
+  onChange: (result: UploadResult | null) => void;
   folder?: string;
   className?: string;
+  label?: string;
+  accept?: string;
 }
 
-export function ImageUploader({ value, onChange, folder, className }: ImageUploaderProps) {
+export function FileUploader({ 
+  value, 
+  type = 'image', 
+  onChange, 
+  folder, 
+  className,
+  label,
+  accept 
+}: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const defaultAccept = type === 'video' ? 'video/*' : 'image/*';
+
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
+    if (type === 'image' && !file.type.startsWith('image/')) {
       setError('Please select an image file.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be under 10MB.');
+    if (type === 'video' && !file.type.startsWith('video/')) {
+      setError('Please select a video file.');
       return;
     }
+    
+    const maxSize = type === 'video' ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for video, 10MB for image
+    if (file.size > maxSize) {
+      setError(`${type === 'video' ? 'Video' : 'Image'} must be under ${type === 'video' ? '50MB' : '10MB'}.`);
+      return;
+    }
+
     setError(null);
     setIsUploading(true);
     try {
-      const result = await uploadImage(file, folder);
-      onChange(result.url);
-    } catch {
-      setError('Upload failed. Please try again.');
+      const result = await uploadFile(file, folder);
+      onChange(result);
+    } catch (err: any) {
+      setError(err.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -59,16 +79,27 @@ export function ImageUploader({ value, onChange, folder, className }: ImageUploa
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={accept || defaultAccept}
         className="hidden"
         onChange={handleInputChange}
       />
 
       {value ? (
-        /* Image preview with replace/remove */
-        <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-100 group">
-          <Image src={value} alt="Cover" fill className="object-cover" />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-100 group border border-slate-200">
+          {type === 'video' ? (
+            <video 
+              src={value} 
+              className="w-full h-full object-cover" 
+              muted 
+              playsInline
+              onMouseOver={e => (e.target as HTMLVideoElement).play()}
+              onMouseOut={e => (e.target as HTMLVideoElement).pause()}
+            />
+          ) : (
+            <Image src={value} alt="Preview" fill className="object-cover" />
+          )}
+          
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <Button
               type="button"
               size="sm"
@@ -83,15 +114,19 @@ export function ImageUploader({ value, onChange, folder, className }: ImageUploa
               type="button"
               size="sm"
               variant="destructive"
-              onClick={() => onChange('')}
+              onClick={() => onChange(null)}
               className="rounded-xl h-9 text-[10px] font-bold uppercase tracking-widest"
             >
               <X className="h-3.5 w-3.5 mr-1.5" /> Remove
             </Button>
           </div>
+          {type === 'video' && (
+            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md rounded-lg p-1.5 text-white">
+              <Film className="h-3 w-3" />
+            </div>
+          )}
         </div>
       ) : (
-        /* Drop zone */
         <button
           type="button"
           onClick={() => !isUploading && inputRef.current?.click()}
@@ -100,7 +135,7 @@ export function ImageUploader({ value, onChange, folder, className }: ImageUploa
           onDrop={handleDrop}
           disabled={isUploading}
           className={cn(
-            'w-full h-40 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all',
+            'w-full aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all',
             dragOver
               ? 'border-primary bg-primary/5 scale-[1.01]'
               : 'border-slate-200 bg-slate-50/50 hover:border-primary/50 hover:bg-primary/5',
@@ -110,18 +145,20 @@ export function ImageUploader({ value, onChange, folder, className }: ImageUploa
           {isUploading ? (
             <>
               <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Uploading...</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Uploading {type}...</p>
             </>
           ) : (
             <>
               <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <ImageIcon className="h-6 w-6 text-primary/60" />
+                {type === 'video' ? <Film className="h-6 w-6 text-primary/60" /> : <ImageIcon className="h-6 w-6 text-primary/60" />}
               </div>
               <div className="text-center space-y-1">
                 <p className="text-xs font-bold text-slate-700">
-                  Drop image here or <span className="text-primary">browse</span>
+                  {label || `Drop ${type} here or browse`}
                 </p>
-                <p className="text-[10px] text-muted-foreground">PNG, JPG, WEBP up to 10MB</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-tight">
+                  {type === 'video' ? 'MP4, MOV up to 50MB' : 'PNG, JPG, WEBP up to 10MB'}
+                </p>
               </div>
             </>
           )}
