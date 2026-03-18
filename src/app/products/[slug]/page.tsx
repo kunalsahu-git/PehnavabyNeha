@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/store/ProductCard";
@@ -37,6 +40,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const zoomRef = useRef<HTMLDivElement>(null);
 
   // Fetch product by slug
@@ -45,7 +49,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     [db, slug]
   );
   const { data: productResults, isLoading } = useCollection<ProductData>(slugQuery);
-  const product = productResults?.[0] as WithId<ProductData> | undefined;
+  // Filter published client-side (query no longer includes compound where('published') clause)
+  const product = (productResults ?? []).find(p => p.published !== false) as WithId<ProductData> | undefined;
 
   // Initialize selectors once product loads
   const [initialized, setInitialized] = useState(false);
@@ -62,7 +67,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   );
   const { data: relatedRaw } = useCollection<ProductData>(relatedQuery);
   const relatedProducts = (relatedRaw ?? [])
-    .filter(p => p.id !== product?.id)
+    .filter(p => p.published !== false && p.id !== product?.id)
     .slice(0, 4) as WithId<ProductData>[];
 
   if (isLoading) {
@@ -171,6 +176,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-headline font-bold leading-tight">{product.name}</h1>
+              {product.sku && (
+                <p className="text-[10px] font-mono text-muted-foreground tracking-widest">SKU: {product.sku}</p>
+              )}
               <div className="flex items-center gap-3 md:gap-4">
                 <span className="text-2xl md:text-3xl font-bold text-primary">₹{product.price.toLocaleString()}</span>
                 {product.originalPrice && (
@@ -191,7 +199,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                 <div className="space-y-3 md:space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Size: <span className="text-primary">{selectedSize}</span></label>
-                    <button className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary underline decoration-accent underline-offset-4">Size Guide</button>
+                    <button onClick={() => setIsSizeGuideOpen(true)} className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary underline decoration-accent underline-offset-4">Size Guide</button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {product.sizes.map(size => (
@@ -373,6 +381,50 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           </div>
         </section>
       )}
+      {/* Size Guide Modal */}
+      <Dialog open={isSizeGuideOpen} onOpenChange={setIsSizeGuideOpen}>
+        <DialogContent className="max-w-2xl w-full">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl uppercase tracking-wider">Size Guide</DialogTitle>
+          </DialogHeader>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold mb-4">All measurements in inches / centimeters</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-primary/5">
+                  <th className="border border-border px-3 py-2.5 text-left font-bold uppercase tracking-wider text-[10px]">Size</th>
+                  <th className="border border-border px-3 py-2.5 text-center font-bold uppercase tracking-wider text-[10px]">Chest<br/><span className="font-normal text-muted-foreground normal-case tracking-normal">in / cm</span></th>
+                  <th className="border border-border px-3 py-2.5 text-center font-bold uppercase tracking-wider text-[10px]">Waist<br/><span className="font-normal text-muted-foreground normal-case tracking-normal">in / cm</span></th>
+                  <th className="border border-border px-3 py-2.5 text-center font-bold uppercase tracking-wider text-[10px]">Hips<br/><span className="font-normal text-muted-foreground normal-case tracking-normal">in / cm</span></th>
+                  <th className="border border-border px-3 py-2.5 text-center font-bold uppercase tracking-wider text-[10px]">Length<br/><span className="font-normal text-muted-foreground normal-case tracking-normal">in / cm</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { size: 'XS', chest: '32 / 81', waist: '26 / 66', hips: '35 / 89', length: '52 / 132' },
+                  { size: 'S',  chest: '34 / 86', waist: '28 / 71', hips: '37 / 94', length: '52 / 132' },
+                  { size: 'M',  chest: '36 / 91', waist: '30 / 76', hips: '39 / 99', length: '53 / 135' },
+                  { size: 'L',  chest: '38 / 97', waist: '32 / 81', hips: '41 / 104', length: '53 / 135' },
+                  { size: 'XL', chest: '40 / 102', waist: '34 / 86', hips: '43 / 109', length: '54 / 137' },
+                  { size: 'XXL', chest: '42 / 107', waist: '36 / 91', hips: '45 / 114', length: '54 / 137' },
+                  { size: 'Free Size', chest: '36–40 / 91–102', waist: '30–34 / 76–86', hips: '38–42 / 97–107', length: '52–54 / 132–137' },
+                ].map((row, i) => (
+                  <tr key={row.size} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                    <td className="border border-border px-3 py-2.5 font-bold text-primary">{row.size}</td>
+                    <td className="border border-border px-3 py-2.5 text-center text-muted-foreground">{row.chest}</td>
+                    <td className="border border-border px-3 py-2.5 text-center text-muted-foreground">{row.waist}</td>
+                    <td className="border border-border px-3 py-2.5 text-center text-muted-foreground">{row.hips}</td>
+                    <td className="border border-border px-3 py-2.5 text-center text-muted-foreground">{row.length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
+            <span className="font-bold text-foreground">How to measure:</span> Chest — measure around the fullest part. Waist — measure around the narrowest part. Hips — measure around the fullest part of hips. Length — measured from shoulder to hem. All measurements are body measurements, not garment measurements.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

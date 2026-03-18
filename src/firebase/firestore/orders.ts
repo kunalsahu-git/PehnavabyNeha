@@ -1,4 +1,5 @@
 import {
+  collection,
   collectionGroup,
   query,
   orderBy,
@@ -26,9 +27,26 @@ export type OrderData = {
   updatedAt: any;
 };
 
-/** List all orders across all users (Admin) */
+export type OrderItemData = {
+  productId: string;
+  productName: string;
+  productImage: string;
+  slug: string;
+  price: number;
+  originalPrice?: number;
+  quantity: number;
+  size?: string;
+  color?: string;
+};
+
+/** List all orders across all users (Admin collectionGroup) */
 export function getAllOrdersQuery(db: Firestore) {
   return query(collectionGroup(db, 'orders'), orderBy('createdAt', 'desc'));
+}
+
+/** Items subcollection for a single order */
+export function getOrderItemsQuery(db: Firestore, userId: string, orderId: string) {
+  return collection(db, 'users', userId, 'orders', orderId, 'items');
 }
 
 /** Update order status */
@@ -41,6 +59,23 @@ export async function updateOrderStatus(
   const orderRef = doc(db, 'users', userId, 'orders', orderId);
   return updateDoc(orderRef, {
     orderStatus: status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Save courier + tracking when marking shipped */
+export async function updateOrderTracking(
+  db: Firestore,
+  userId: string,
+  orderId: string,
+  courierName: string,
+  trackingNumber: string,
+) {
+  const orderRef = doc(db, 'users', userId, 'orders', orderId);
+  return updateDoc(orderRef, {
+    orderStatus: 'SHIPPED',
+    courierName,
+    trackingNumber,
     updatedAt: serverTimestamp(),
   });
 }

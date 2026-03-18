@@ -13,9 +13,12 @@ import {
 
 export type ProductData = {
   slug: string;
+  sku?: string;
   name: string;
   category: string;
   categorySlug: string;
+  /** Array of collection slugs this product belongs to (for multi-collection membership) */
+  collections?: string[];
   price: number;
   originalPrice?: number;
   image: string;
@@ -41,41 +44,42 @@ export function getAllProductsQuery(db: Firestore) {
   return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
 }
 
-/** Published products by category slug (public storefront) */
+/** Products by category slug — filter published + sort client-side (avoids composite index) */
 export function getProductsByCategoryQuery(db: Firestore, categorySlug: string) {
   return query(
     collection(db, 'products'),
-    where('published', '==', true),
-    where('categorySlug', '==', categorySlug),
-    orderBy('createdAt', 'desc')
+    where('categorySlug', '==', categorySlug)
   );
 }
 
-/** Published new arrivals (public storefront) */
+/** New arrivals — filter published + sort client-side (avoids composite index) */
 export function getNewArrivalsQuery(db: Firestore) {
   return query(
     collection(db, 'products'),
-    where('published', '==', true),
-    where('isNew', '==', true),
-    orderBy('createdAt', 'desc')
+    where('isNew', '==', true)
   );
 }
 
-/** Published sale products (public storefront) */
+/** Sale products — filter published + sort client-side (avoids composite index) */
 export function getSaleProductsQuery(db: Firestore) {
   return query(
     collection(db, 'products'),
-    where('published', '==', true),
-    where('isSale', '==', true),
-    orderBy('createdAt', 'desc')
+    where('isSale', '==', true)
   );
 }
 
-/** Single product by slug (public storefront) */
+/** Products in a collection — filter published + sort client-side (avoids composite index) */
+export function getProductsByCollectionQuery(db: Firestore, collectionSlug: string) {
+  return query(
+    collection(db, 'products'),
+    where('collections', 'array-contains', collectionSlug)
+  );
+}
+
+/** Single product by slug — filter published client-side (avoids composite index) */
 export function getProductBySlugQuery(db: Firestore, slug: string) {
   return query(
     collection(db, 'products'),
-    where('published', '==', true),
     where('slug', '==', slug)
   );
 }
@@ -107,6 +111,24 @@ export function slugify(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+/**
+ * Generate a unique SKU for a product.
+ * Format: PNH-<5-char name prefix>-<4-char random hex>
+ * Example: PNH-IVORY-4F2A
+ */
+export function generateSku(name: string): string {
+  const prefix = name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '')
+    .slice(0, 5)
+    .padEnd(5, 'X');
+  const suffix = Math.floor(Math.random() * 0xffff)
+    .toString(16)
+    .toUpperCase()
+    .padStart(4, '0');
+  return `PNH-${prefix}-${suffix}`;
 }
 
 export function formatProductDate(createdAt: any): string {

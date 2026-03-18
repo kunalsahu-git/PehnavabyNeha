@@ -14,17 +14,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    /** 
+    /**
      * General admin check.
      * Includes hardcoded UIDs for developers and a database-driven roles collection.
      */
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.uid in [
-          'zS64HBMM25aZwuqBoiiFg1kU9Tk2',
-          'c5yNNdozphYmPahMpu13nUnerVI2',
-          'RQxTHd3OakSJZ8HsjEPkO4jygg93'
-        ] ||
+        request.auth.uid == 'zS64HBMM25aZwuqBoiiFg1kU9Tk2' ||
+        request.auth.uid == 'c5yNNdozphYmPahMpu13nUnerVI2' ||
+        request.auth.uid == 'RQxTHd3OakSJZ8HsjEPkO4jygg93' ||
+        request.auth.uid == 'iyh9ADKMHYaiPZXma4iIdtiIXWE2' ||
         exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
       );
     }
@@ -37,15 +36,13 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     match /users/{userId} {
-      // Robust ownership rule: A user can always read/write their own document.
       allow get, write: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
 
-      // Sub-collections for user data
       match /addresses/{addressId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
-      
+
       match /wishlistItems/{wishlistItemId} {
         allow read, write: if isOwner(userId) || isAdmin();
       }
@@ -100,20 +97,33 @@ service cloud.firestore {
     }
 
     /** App Configuration & Settings */
-    match /configs/homepage/{configKey} {
+    match /configs/{configId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    match /configs/settings/{settingKey} {
+    /** Storefront Content — public read, admin write */
+    match /nav_items/{navItemId} {
       allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /hero_slides/{slideId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /studio_reels/{reelId} {
+      allow get: if true;
+      allow list: if true; // The index must handle the where published == true and orderBy order asc 
       allow create, update, delete: if isAdmin();
     }
 
     /** RBAC Collection */
     match /roles_admin/{adminUid} {
       allow get: if isSignedIn();
-      allow list, create, update, delete: if false;
+      allow list, create, delete: if isAdmin();
+      allow update: if false;
     }
   }
 }

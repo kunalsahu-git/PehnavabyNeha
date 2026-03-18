@@ -7,18 +7,39 @@ import { useState } from "react";
 import { Instagram, Facebook, Twitter, ShieldCheck, Truck, RefreshCw, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
 } from "@/components/ui/dialog";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { getAllCategoriesQuery, type CategoryData } from "@/firebase/firestore/categories";
 
 type PolicyType = 'shipping' | 'returns' | 'privacy' | 'terms' | null;
 
+// Static fallback — shown if Firestore categories haven't loaded yet
+const FALLBACK_SHOPPING_LINKS = [
+  { name: 'Sarees', href: '/collections/sarees' },
+  { name: 'Lehengas', href: '/collections/lehengas' },
+  { name: 'Accessories', href: '/collections/accessories' },
+  { name: 'Bridal Wear', href: '/collections/bridal-wear' },
+  { name: 'New Arrivals', href: '/collections/new-arrivals' },
+];
+
 export function Footer() {
   const [activePolicy, setActivePolicy] = useState<PolicyType>(null);
+
+  // Live categories from Firestore — fallback to static if empty
+  const db = useFirestore();
+  const categoriesQuery = useMemoFirebase(() => db ? getAllCategoriesQuery(db) : null, [db]);
+  const { data: allCategories } = useCollection<CategoryData>(categoriesQuery);
+  const firestoreShoppingLinks = (allCategories ?? [])
+    .filter(c => c.published)
+    .slice(0, 6)
+    .map(c => ({ name: c.name, href: `/collections/${c.slug}` }));
+  const shoppingLinks = firestoreShoppingLinks.length > 0 ? firestoreShoppingLinks : FALLBACK_SHOPPING_LINKS;
 
   const policyContent = {
     shipping: {
@@ -101,14 +122,16 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links — LIVE from Firestore categories (fallback: FALLBACK_SHOPPING_LINKS) */}
           <div className="flex flex-col space-y-6">
             <h4 className="font-bold text-sm uppercase tracking-widest text-primary">Shopping</h4>
             <nav className="flex flex-col space-y-3">
               <Link href="/about" className="text-sm hover:text-primary transition-colors">Our Story</Link>
-              <Link href="/collections/ethnic-wear" className="text-sm hover:text-primary transition-colors">Ethnic Wear</Link>
-              <Link href="/collections/sarees" className="text-sm hover:text-primary transition-colors">Sarees</Link>
-              <Link href="/collections/western-fusion" className="text-sm hover:text-primary transition-colors">Western & Fusion</Link>
+              {shoppingLinks.map(link => (
+                <Link key={link.href} href={link.href} className="text-sm hover:text-primary transition-colors">
+                  {link.name}
+                </Link>
+              ))}
               <Link href="/collections/sale" className="text-sm text-primary font-bold hover:underline">Clearance Sale</Link>
             </nav>
           </div>

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   // Generate Cloudinary signed upload params
   const timestamp = Math.round(Date.now() / 1000);
-  const folder = 'pehnava/products';
+  const folder = (formData.get('folder') as string) || 'pehnava/products';
   const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
   const signature = crypto
     .createHash('sha256')

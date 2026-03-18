@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  ShoppingBag, 
-  ClipboardList, 
-  Layers, 
-  Settings, 
-  Users, 
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  ClipboardList,
+  Layers,
+  Settings,
+  Users,
   Menu,
   X,
   LogOut,
@@ -18,7 +18,12 @@ import {
   Loader2,
   Tag,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Database,
+  Images,
+  Star,
+  Film,
+  Navigation,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -33,7 +38,13 @@ const ADMIN_NAV = [
   { name: 'Products', href: '/admin/products', icon: ShoppingBag },
   { name: 'Categories', href: '/admin/categories', icon: Layers },
   { name: 'Collections', href: '/admin/collections', icon: Tag },
+  { name: 'Navigation', href: '/admin/navigation', icon: Navigation },
+  { name: 'Hero Slides', href: '/admin/hero-slides', icon: Images },
+  { name: 'Featured Product', href: '/admin/featured-product', icon: Star },
+  { name: 'Studio Reels', href: '/admin/studio-reels', icon: Film },
+  { name: 'Admin Users', href: '/admin/users', icon: Users },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Seed Data', href: '/admin/seed', icon: Database },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -58,6 +69,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push('/account/login');
     }
   }, [user, isUserLoading, router]);
+
+  // Fix: Radix UI sets pointer-events:none on <body> while a Sheet/Dialog is open.
+  // After an async save closes the modal, Radix sometimes fails to clean this up,
+  // leaving the entire page unclickable. This MutationObserver fires immediately
+  // whenever body's style changes and removes the orphaned pointer-events:none
+  // as soon as no Radix overlay is actually open anymore.
+  useEffect(() => {
+    const releaseBodyLock = () => {
+      const hasOpenOverlay = !!document.querySelector(
+        '[data-radix-dialog-overlay][data-state="open"], [data-radix-popper-content-wrapper]'
+      );
+      if (!hasOpenOverlay) {
+        if (document.body.style.pointerEvents === 'none') {
+          document.body.style.pointerEvents = '';
+        }
+        document.body.removeAttribute('data-scroll-locked');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      }
+    };
+
+    const observer = new MutationObserver(releaseBodyLock);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['style', 'data-scroll-locked'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -86,15 +126,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen bg-slate-50/50">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-72 bg-slate-900 text-white sticky top-0 h-screen">
-        <div className="p-8">
+      <aside className="hidden lg:flex flex-col w-72 bg-slate-900 text-white sticky top-0 h-screen overflow-hidden">
+        <div className="p-8 shrink-0">
           <Link href="/admin" className="flex flex-col items-start group">
             <span className="text-2xl font-headline font-bold text-white tracking-tighter leading-none">PEHNAVA</span>
             <span className="text-[9px] font-headline font-medium tracking-[0.4em] text-accent -mt-1 uppercase">Admin Panel</span>
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 py-4 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {ADMIN_NAV.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -126,7 +166,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </nav>
 
-        <div className="p-6 border-t border-white/5 space-y-4">
+        <div className="shrink-0 p-6 border-t border-white/5 space-y-4">
           <div className="bg-white/5 rounded-2xl p-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center font-bold text-slate-900">
               {user?.displayName?.[0] || user?.email?.[0] || 'A'}
