@@ -130,6 +130,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    /** Promo Coupons */
+    match /coupons/{couponId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     /** RBAC Collection */
     match /roles_admin/{adminUid} {
       allow get: if isSignedIn();

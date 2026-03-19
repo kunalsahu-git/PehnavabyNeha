@@ -28,7 +28,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartContext';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc, type WithId } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { getUserProfile, getUserAddressesQuery, saveUserAddress, UserAddress } from '@/firebase/firestore/users';
 import { UPIPayment } from '@/components/store/UPIPayment';
@@ -36,7 +36,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { PaymentVerification } from '@/components/store/PaymentVerification';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { validateCoupon, CouponData, RewardType } from '@/firebase/firestore/coupons';
+import { Star, Tag as TagIcon, Percent, Sparkles, X, XCircle } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
@@ -67,6 +69,13 @@ export default function CheckoutPage() {
   const [saveForFuture, setSaveForFuture] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
+  // Coupon State
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string, code: string, discount: number, description: string } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<WithId<CouponData>[]>([]);
+
   // Fetch Profile for Autofill
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -92,8 +101,64 @@ export default function CheckoutPage() {
     }
   }, [user, profile, address.name, address.phone]);
 
+  // Fetch Available Coupons for Suggestions
+  useEffect(() => {
+    async function fetchCoupons() {
+      if (!db) return;
+      const q = query(collection(db, 'coupons'), where('isActive', '==', true));
+      const snap = await getDocs(q);
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as WithId<CouponData>));
+      setAvailableCoupons(docs);
+    }
+    fetchCoupons();
+  }, [db]);
+
+  const handleApplyCoupon = async (codeOverride?: string) => {
+    const codeToUse = codeOverride || couponCode;
+    if (!codeToUse || !db || !user) return;
+    
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+    try {
+      // For validation, we need to provide category/collection IDs for each item
+      // Assuming item has categoryId/collectionId or we might need to fetch them
+      const itemsWithMeta = items.map(item => ({
+        ...item,
+        productId: item.id,
+        // Fallbacks if not present in cart context
+        categoryId: (item as any).categoryId || '', 
+        collectionId: (item as any).collectionId || ''
+      }));
+
+      const result = await validateCoupon(db, codeToUse, user.uid, itemsWithMeta, subtotal);
+      
+      if (result.valid) {
+        setAppliedCoupon({
+          id: result.couponId!,
+          code: result.couponCode!,
+          discount: result.discount!,
+          description: result.description!
+        });
+        setCouponCode('');
+        toast({ title: 'Coupon Applied!', description: `You saved ₹${result.discount?.toLocaleString()}` });
+      } else {
+        setCouponError(result.reason || 'Invalid coupon.');
+      }
+    } catch (err) {
+      setCouponError('System error validating coupon.');
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    toast({ title: 'Coupon Removed' });
+  };
+
   const deliveryCharge = subtotal > 2999 ? 0 : 99;
-  const total = subtotal + deliveryCharge;
+  const discountAmount = appliedCoupon?.discount || 0;
+  const total = Math.max(0, subtotal + deliveryCharge - discountAmount);
 
   const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +207,9 @@ export default function CheckoutPage() {
         subtotal,
         deliveryCharge,
         total,
+        discount: discountAmount,
+        couponCode: appliedCoupon?.code || null,
+        couponId: appliedCoupon?.id || null,
         orderStatus: 'PENDING',
         paymentStatus: 'PENDING',
         paymentMethod: 'UPI',
@@ -586,9 +654,96 @@ export default function CheckoutPage() {
                         {deliveryCharge === 0 ? "FREE" : `₹${deliveryCharge}`}
                       </span>
                     </div>
+
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-xs text-green-600 font-bold animate-in fade-in zoom-in-95">
+                        <div className="flex items-center gap-1 group">
+                          <span>Discount ({appliedCoupon.code})</span>
+                          <button onClick={removeCoupon} className="hover:text-red-500 transition-colors">
+                            <XCircle className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <span>-₹{appliedCoupon.discount.toLocaleString()}</span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between text-base font-bold text-primary pt-2">
                       <span>Total Amount</span>
                       <span>₹{total.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Coupon Section */}
+                  {!appliedCoupon && (
+                    <div className="space-y-4 pt-4 border-t">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <TagIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="Enter Code" 
+                            className={cn("pl-10 h-11 rounded-xl text-xs font-bold uppercase tracking-widest", couponError && "border-red-300 bg-red-50")}
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(null); }}
+                          />
+                        </div>
+                        <Button 
+                          variant="secondary" 
+                          className="h-11 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest bg-slate-900 text-white hover:bg-black"
+                          onClick={() => handleApplyCoupon()}
+                          disabled={isValidatingCoupon || !couponCode}
+                        >
+                          {isValidatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                        </Button>
+                      </div>
+                      {couponError && <p className="text-[10px] text-red-500 font-bold ml-1">{couponError}</p>}
+                    </div>
+                  )}
+
+                  {/* Coupon Suggestions & Upsell */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <Sparkles className="h-3 w-3 text-amber-500" /> Exclusive Offers
+                    </h3>
+                    <div className="space-y-3">
+                      {availableCoupons.filter(c => !appliedCoupon || appliedCoupon.id !== c.id).map((coupon) => {
+                        const isValueLocked = coupon.minOrderValue && subtotal < coupon.minOrderValue;
+                        const isQtyLocked = coupon.minQuantity && items.reduce((a,b) => a+b.quantity, 0) < coupon.minQuantity;
+                        const isLocked = isValueLocked || isQtyLocked;
+                        
+                        return (
+                          <div 
+                            key={coupon.id} 
+                            onClick={() => !isLocked && handleApplyCoupon(coupon.code)}
+                            className={cn(
+                              "p-3 rounded-xl border flex items-center justify-between gap-3 transition-all",
+                              isLocked ? "bg-slate-50/50 border-slate-100 opacity-60 grayscale cursor-not-allowed" : "bg-primary/5 border-primary/20 cursor-pointer hover:bg-primary/10"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-black font-mono tracking-wider">{coupon.code}</span>
+                                {isLocked && <Lock className="h-2.5 w-2.5 text-slate-400" />}
+                              </div>
+                              <p className="text-[9px] text-muted-foreground font-medium truncate">{coupon.description}</p>
+                              {isValueLocked && (
+                                <p className="text-[8px] text-primary font-bold mt-1">
+                                  Add ₹{(coupon.minOrderValue! - subtotal).toLocaleString()} more to unlock!
+                                </p>
+                              )}
+                              {isQtyLocked && !isValueLocked && (
+                                <p className="text-[8px] text-primary font-bold mt-1">
+                                  Add {coupon.minQuantity! - items.reduce((a,b) => a+b.quantity, 0)} more items to unlock!
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                               <Badge className="bg-white text-slate-900 text-[8px] font-bold tracking-tighter px-1.5 h-5 flex items-center gap-1">
+                                 {coupon.rewardType === 'PERCENTAGE' ? <Percent className="h-2 w-2" /> : "₹"}{coupon.rewardValue}{coupon.rewardType === 'PERCENTAGE' ? " OFF" : ""}
+                               </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

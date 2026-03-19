@@ -40,6 +40,7 @@ const ADMIN_NAV = [
   { name: 'Products', href: '/admin/products', icon: ShoppingBag },
   { name: 'Categories', href: '/admin/categories', icon: Layers },
   { name: 'Collections', href: '/admin/collections', icon: Tag },
+  { name: 'Coupons', href: '/admin/coupons', icon: Tag },
   { name: 'Navigation', href: '/admin/navigation', icon: Navigation },
   { name: 'Hero Slides', href: '/admin/hero-slides', icon: Images },
   { name: 'Featured Product', href: '/admin/featured-product', icon: Star },
