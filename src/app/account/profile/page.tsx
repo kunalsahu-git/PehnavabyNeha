@@ -18,17 +18,28 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { updateUserProfile } from '@/firebase/firestore/users';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+
+  // Profile data from Firestore
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+
+  const { data: profile, isLoading: isProfileLoading } = useDoc(profileRef);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,16 +52,16 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.displayName || '',
-        email: user.email || '',
-        phone: user.phoneNumber || '',
-        birthMonth: '',
-        birthYear: ''
+        name: profile?.name || user.displayName || '',
+        email: profile?.email || user.email || '',
+        phone: profile?.phone || user.phoneNumber || '',
+        birthMonth: profile?.birthMonth || '',
+        birthYear: profile?.birthYear || ''
       });
     } else if (!isUserLoading) {
       router.push('/account/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, profile, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -58,14 +69,30 @@ export default function ProfilePage() {
     router.push('/');
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !db) return;
+
     setIsSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await updateUserProfile(db, user.uid, {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        birthMonth: formData.birthMonth,
+        birthYear: formData.birthYear
+      });
       toast({ title: "Profile Updated", description: "Your details have been saved successfully." });
-    }, 1500);
+    } catch (err) {
+      console.error("Error saving profile:", err);
+      toast({ 
+        title: "Update Failed", 
+        description: "There was an error saving your profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isUserLoading) {
@@ -188,7 +215,11 @@ export default function ProfilePage() {
                     <div className="grid grid-cols-2 gap-4 max-w-sm">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Birth Month</Label>
-                        <select className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                        <select 
+                          className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                          value={formData.birthMonth}
+                          onChange={(e) => setFormData({...formData, birthMonth: e.target.value})}
+                        >
                           <option value="">Select Month</option>
                           {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
                             <option key={m} value={m}>{m}</option>
@@ -197,7 +228,13 @@ export default function ProfilePage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Birth Year</Label>
-                        <Input className="h-12 rounded-xl" placeholder="YYYY" maxLength={4} />
+                        <Input 
+                          className="h-12 rounded-xl" 
+                          placeholder="YYYY" 
+                          maxLength={4} 
+                          value={formData.birthYear}
+                          onChange={(e) => setFormData({...formData, birthYear: e.target.value})}
+                        />
                       </div>
                     </div>
                   </div>

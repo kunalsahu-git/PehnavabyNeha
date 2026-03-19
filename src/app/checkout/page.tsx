@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -16,38 +16,86 @@ import {
   Upload,
   Loader2,
   CheckCircle2,
-  Lock
+  Lock,
+  Plus,
+  Info,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartContext';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { getUserProfile, getUserAddressesQuery, saveUserAddress, UserAddress } from '@/firebase/firestore/users';
+import { UPIPayment } from '@/components/store/UPIPayment';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { PaymentVerification } from '@/components/store/PaymentVerification';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
+  const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
+  // Fetch Boutique Settings for Payment Details
+  const settingsRef = useMemoFirebase(() => doc(db, 'configs', 'settings'), [db]);
+  const settingsDoc = useDoc<any>(settingsRef);
+  const settings = settingsDoc.data;
+  const merchantName = settings?.displayName || 'PehnavaByNeha';
+  const upiId = settings?.upiId || 'Q544369675@ybl';
+
+  const [step, setStep] = useState<'shipping' | 'payment' | 'verification'>('shipping');
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [address, setAddress] = useState({
     name: '',
     phone: '',
     line1: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    label: 'Home'
   });
+  const [saveForFuture, setSaveForFuture] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
+  // Fetch Profile for Autofill
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
+  // Fetch Saved Addresses
+  const addressesQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return getUserAddressesQuery(db, user.uid);
+  }, [db, user?.uid]);
+  const { data: savedAddresses, isLoading: isAddressesLoading } = useCollection<UserAddress>(addressesQuery);
+
+  // Autofill logic
+  useEffect(() => {
+    if (user && !address.name && !address.phone) {
+      setAddress(prev => ({
+        ...prev,
+        name: profile?.name || user.displayName || '',
+        phone: profile?.phone || user.phoneNumber || ''
+      }));
+    }
+  }, [user, profile, address.name, address.phone]);
 
   const deliveryCharge = subtotal > 2999 ? 0 : 99;
   const total = subtotal + deliveryCharge;
 
-  const handleNextStep = (e: React.FormEvent) => {
+  const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast({
@@ -58,22 +106,95 @@ export default function CheckoutPage() {
       router.push('/account/login');
       return;
     }
+
+    // Save address if requested or if it's a new one not already in savedAddresses
+    if (saveForFuture && db && user) {
+      try {
+        await saveUserAddress(db, user.uid, address);
+      } catch (err) {
+        console.error("Failed to save address:", err);
+      }
+    }
+
     setStep('payment');
     window.scrollTo(0, 0);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    if (!user || items.length === 0) return;
+    
     setIsProcessing(true);
-    // Simulate order processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      clearCart();
-      router.push('/checkout/success');
+    try {
+      // 1. Create the order in Firestore
+      const orderData = {
+        userId: user.uid,
+        name: address.name,
+        phone: address.phone,
+        addressJson: JSON.stringify(address),
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          image: item.image
+        })),
+        subtotal,
+        deliveryCharge,
+        total,
+        orderStatus: 'PENDING',
+        paymentStatus: 'PENDING',
+        paymentMethod: 'UPI',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'orders'), orderData);
+      
+      // 1.1 Save items to subcollection for orders page & admin dashboard
+      await Promise.all(items.map(item => 
+        addDoc(collection(db, 'users', user.uid, 'orders', docRef.id, 'items'), {
+          productId: item.id,
+          productName: item.name,
+          productImage: item.image,
+          slug: item.id, // Assuming slug is same as ID or use a real slug if available
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color || '',
+          createdAt: serverTimestamp()
+        })
+      ));
+
+      setCreatedOrderId(docRef.id);
+      
+      // 2. Move to verification step
+      setStep('verification');
+      window.scrollTo(0, 0);
+      
       toast({
-        title: "Order Placed!",
-        description: "We've received your order and are verifying payment.",
+        title: "Order Initialized",
+        description: "Please upload your payment receipt to complete the order.",
       });
-    }, 2500);
+    } catch (err) {
+      console.error("Order Creation Error:", err);
+      toast({
+        title: "Error",
+        description: "Failed to initialize order. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVerificationComplete = () => {
+    clearCart();
+    router.push(`/checkout/success?orderId=${createdOrderId}`);
+    toast({
+      title: "Payment Submitted!",
+      description: "We're verifying your payment. Your order is now confirmed.",
+    });
   };
 
   if (items.length === 0) {
@@ -121,11 +242,23 @@ export default function CheckoutPage() {
               <div className="flex items-center gap-2">
                 <div className={cn(
                   "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
-                  step === 'payment' ? "bg-primary text-white border-primary" : "border-muted-foreground/20 text-muted-foreground"
+                  step === 'payment' ? "bg-primary text-white border-primary" : 
+                  step === 'verification' ? "bg-green-100 text-green-700 border-green-100" :
+                  "border-muted-foreground/20 text-muted-foreground"
                 )}>
-                  2
+                  {step === 'verification' ? <CheckCircle2 className="h-5 w-5" /> : "2"}
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Payment</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors",
+                  step === 'verification' ? "bg-primary text-white border-primary" : "border-muted-foreground/20 text-muted-foreground"
+                )}>
+                  3
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Verify</span>
               </div>
             </div>
           </div>
@@ -135,12 +268,116 @@ export default function CheckoutPage() {
             <div className="lg:col-span-7 space-y-8">
               {step === 'shipping' ? (
                 <form onSubmit={handleNextStep} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border space-y-8">
-                  <div className="flex items-center gap-3 border-b pb-4">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-headline font-bold uppercase tracking-widest">Delivery Address</h2>
+                  <div className="flex items-center justify-between border-b pb-4">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      <h2 className="text-lg font-headline font-bold uppercase tracking-widest">Delivery Address</h2>
+                    </div>
+                    {user && (
+                      <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest bg-secondary/30">
+                        Saved: {savedAddresses?.length || 0}
+                      </Badge>
+                    )}
                   </div>
 
+                  {/* Saved Addresses Selector */}
+                  {user && savedAddresses && savedAddresses.length > 0 && (
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select from saved addresses</Label>
+                      <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+                        {savedAddresses.map((sa) => (
+                          <div 
+                            key={sa.id}
+                            onClick={() => {
+                              setSelectedAddressId(sa.id);
+                              setAddress({
+                                name: sa.name,
+                                phone: sa.phone,
+                                line1: sa.line1,
+                                city: sa.city,
+                                state: sa.state,
+                                pincode: sa.pincode,
+                                label: sa.label
+                              });
+                              setSaveForFuture(false);
+                            }}
+                            className={cn(
+                              "flex-shrink-0 w-64 p-4 rounded-2xl border-2 transition-all cursor-pointer relative group",
+                              selectedAddressId === sa.id 
+                                ? "border-primary bg-primary/5 shadow-md" 
+                                : "border-slate-100 bg-slate-50/50 hover:border-primary/20 hover:bg-white"
+                            )}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge className="text-[8px] font-bold uppercase tracking-tighter bg-slate-900">
+                                {sa.label}
+                              </Badge>
+                              {selectedAddressId === sa.id && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                            </div>
+                            <h4 className="text-xs font-bold truncate mb-1">{sa.name}</h4>
+                            <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                              {sa.line1}, {sa.city}, {sa.pincode}
+                            </p>
+                            <p className="text-[10px] font-bold mt-2">{sa.phone}</p>
+                          </div>
+                        ))}
+                        
+                        {/* Add New Option */}
+                        <div 
+                          onClick={() => {
+                            setSelectedAddressId(null);
+                            setAddress({
+                              name: profile?.name || user.displayName || '',
+                              phone: profile?.phone || user.phoneNumber || '',
+                              line1: '',
+                              city: '',
+                              state: '',
+                              pincode: '',
+                              label: 'Home'
+                            });
+                          }}
+                          className={cn(
+                            "flex-shrink-0 w-48 p-4 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all cursor-pointer",
+                            selectedAddressId === null 
+                              ? "border-primary bg-primary/5 text-primary" 
+                              : "border-slate-200 text-muted-foreground hover:bg-slate-50"
+                          )}
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Add New</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Address Label (Visible only for new addresses or when editing) */}
+                    {!selectedAddressId && (
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="label" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Address Type (e.g. Home, Office)</Label>
+                        <div className="flex gap-2">
+                          {['Home', 'Office', 'Other'].map(l => (
+                            <Button 
+                              key={l}
+                              type="button"
+                              variant={address.label === l ? 'default' : 'outline'}
+                              size="sm"
+                              className="rounded-full h-8 px-4 text-[9px] font-bold uppercase tracking-widest"
+                              onClick={() => setAddress({...address, label: l})}
+                            >
+                              {l}
+                            </Button>
+                          ))}
+                          <Input 
+                            placeholder="Custom Label"
+                            className="rounded-full h-8 text-[10px] max-w-[120px]"
+                            value={!['Home', 'Office', 'Other'].includes(address.label) ? address.label : ''}
+                            onChange={(e) => setAddress({...address, label: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Full Name</Label>
                       <Input 
@@ -186,6 +423,17 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="state" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">State</Label>
+                      <Input 
+                        id="state" 
+                        required 
+                        placeholder="e.g. Maharashtra"
+                        className="rounded-xl h-12"
+                        value={address.state}
+                        onChange={(e) => setAddress({...address, state: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="pincode" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pincode</Label>
                       <Input 
                         id="pincode" 
@@ -198,13 +446,26 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
+                  {user && !selectedAddressId && (
+                    <div className="flex items-center space-x-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <Checkbox 
+                        id="saveAddress" 
+                        checked={saveForFuture}
+                        onCheckedChange={(checked) => setSaveForFuture(!!checked)}
+                      />
+                      <label htmlFor="saveAddress" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground cursor-pointer">
+                        Save this address for future purchases
+                      </label>
+                    </div>
+                  )}
+
                   <div className="pt-4">
                     <Button type="submit" className="w-full h-14 rounded-full font-bold uppercase text-xs tracking-[0.2em] shadow-lg">
                       Continue to Payment
                     </Button>
                   </div>
                 </form>
-              ) : (
+              ) : step === 'payment' ? (
                 <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border space-y-8 animate-in fade-in slide-in-from-bottom-4">
                   <div className="flex items-center gap-3 border-b pb-4">
                     <CreditCard className="h-5 w-5 text-primary" />
@@ -213,32 +474,28 @@ export default function CheckoutPage() {
 
                   <div className="space-y-6">
                     <div className="p-6 bg-slate-50 rounded-2xl border-2 border-primary/20 flex flex-col items-center text-center space-y-4">
-                      <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Image src="https://placehold.co/40x24/png?text=UPI" width={32} height={20} alt="UPI" className="opacity-80" />
+                      <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Smartphone className="h-6 w-6 text-primary" />
                       </div>
                       <div className="space-y-1">
-                        <h3 className="font-bold text-sm">Scan & Pay via UPI</h3>
-                        <p className="text-xs text-muted-foreground">Safe, fast, and secure. Verified by Neha.</p>
+                        <h3 className="font-bold text-sm underline underline-offset-4 decoration-primary/20">Scan & Pay via UPI</h3>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-relaxed">Secure transaction verified by Boutique</p>
                       </div>
-                      <div className="relative aspect-square w-48 bg-white p-2 rounded-xl border-2 border-slate-100 shadow-sm">
-                        <Image 
-                          src="https://placehold.co/200x200/png?text=QR+CODE" 
-                          alt="Payment QR" 
-                          fill 
-                          className="object-contain"
-                        />
-                      </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary">UPI ID: pehnavabyneha@okaxis</p>
-                    </div>
+                      
+                      {/* Dynamic UPI Payment Component */}
+                      <UPIPayment 
+                        amount={total} 
+                        merchantName={merchantName}
+                        upiId={upiId}
+                        orderId="Checkout" 
+                        className="mt-4" 
+                      />
 
-                    <div className="space-y-4">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block text-center">Upload Payment Screenshot</Label>
-                      <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center space-y-3 hover:border-primary/40 transition-colors cursor-pointer group bg-slate-50/50">
-                        <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                          <Upload className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <p className="text-xs font-medium text-muted-foreground">Click or drag proof of payment here</p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">JPG, PNG up to 5MB</p>
+                      <div className="pt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 flex gap-3 text-left">
+                        <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-[9px] text-blue-800 font-bold leading-normal uppercase tracking-tighter italic">
+                          After paying, click "Complete Order" to upload your payment screenshot.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -250,11 +507,27 @@ export default function CheckoutPage() {
                     <Button 
                       onClick={handlePlaceOrder} 
                       disabled={isProcessing}
-                      className="flex-[2] h-14 rounded-full bg-slate-900 hover:bg-black text-white font-bold uppercase text-xs tracking-[0.2em] shadow-xl"
+                      className="flex-[2] h-14 rounded-full bg-slate-900 hover:bg-black text-white font-bold uppercase text-xs tracking-[0.2em] shadow-xl border-b-4 border-slate-700 active:border-b-0 active:translate-y-1 transition-all"
                     >
-                      {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Order"}
+                      {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : "I have Paid, Complete Order"}
                     </Button>
                   </div>
+                </div>
+              ) : (
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border space-y-8 animate-in fade-in slide-in-from-right-4">
+                  <div className="flex items-center gap-3 border-b pb-4">
+                    <Upload className="h-5 w-5 text-primary" />
+                    <h2 className="text-lg font-headline font-bold uppercase tracking-widest">Verify Payment</h2>
+                  </div>
+                  
+                  {createdOrderId && (
+                    <PaymentVerification 
+                      orderId={createdOrderId} 
+                      userId={user?.uid || ''}
+                      total={total} 
+                      onComplete={handleVerificationComplete} 
+                    />
+                  )}
                 </div>
               )}
 
@@ -335,6 +608,3 @@ export default function CheckoutPage() {
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
-}

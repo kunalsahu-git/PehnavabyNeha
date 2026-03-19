@@ -25,6 +25,7 @@ export type OrderData = {
   trackingNumber?: string;
   createdAt: any;
   updatedAt: any;
+  items?: any[]; // Fallback for cases where subcollection is missing
 };
 
 export type OrderItemData = {
@@ -42,6 +43,11 @@ export type OrderItemData = {
 /** List all orders across all users (Admin collectionGroup) */
 export function getAllOrdersQuery(db: Firestore) {
   return query(collectionGroup(db, 'orders'), orderBy('createdAt', 'desc'));
+}
+
+/** List orders for a specific user */
+export function getUserOrdersQuery(db: Firestore, userId: string) {
+  return query(collection(db, 'users', userId, 'orders'), orderBy('createdAt', 'desc'));
 }
 
 /** Items subcollection for a single order */

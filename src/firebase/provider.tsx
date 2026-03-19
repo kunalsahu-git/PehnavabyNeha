@@ -101,7 +101,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, userAuthState.user, userAuthState.isUserLoading, userAuthState.userError]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -128,8 +128,8 @@ export const useFirebase = (): FirebaseServicesAndUser => {
 
   return {
     firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
+    firestore: context.firestore as Firestore,
+    auth: context.auth as Auth,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,

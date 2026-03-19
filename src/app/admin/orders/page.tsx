@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import {
   Search, Filter, MoreVertical, Eye, Truck, CheckCircle2,
@@ -44,15 +45,19 @@ import {
   updateOrderTracking, verifyOrderPayment,
   type OrderData, type OrderItemData,
 } from '@/firebase/firestore/orders';
+import { getBoutiqueSettings, BoutiqueSettings } from '@/firebase/firestore/settings';
+import { generateInvoicePDF } from '@/lib/invoice-generator';
+import { getTrackingUrl } from '@/lib/tracking-utils';
+import { getDocs } from 'firebase/firestore';
 
 // ── Order items sub-component (separate so hooks are unconditional) ────────────
-function OrderItemsList({ userId, orderId }: { userId: string; orderId: string }) {
+function OrderItemsList({ userId, orderId, fallbackItems }: { userId: string; orderId: string; fallbackItems?: any[] }) {
   const db = useFirestore();
   const itemsQuery = useMemoFirebase(
     () => db ? getOrderItemsQuery(db, userId, orderId) : null,
     [db, userId, orderId]
   );
-  const { data: items, isLoading } = useCollection<OrderItemData>(itemsQuery);
+  const { data: subItems, isLoading } = useCollection<OrderItemData>(itemsQuery);
 
   if (isLoading) {
     return (
@@ -61,24 +66,28 @@ function OrderItemsList({ userId, orderId }: { userId: string; orderId: string }
       </div>
     );
   }
+
+  const items = (subItems && subItems.length > 0) ? subItems : fallbackItems;
+
   if (!items?.length) {
     return <p className="text-xs text-muted-foreground py-4 text-center">No items found.</p>;
   }
+
   return (
     <div className="space-y-3">
-      {items.map(item => (
-        <div key={item.id} className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+      {items.map((item: any) => (
+        <div key={item.productId || item.id} className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
           <div className="relative h-16 w-12 rounded-lg overflow-hidden bg-slate-200 shrink-0">
-            {item.productImage
-              ? <Image src={item.productImage} alt={item.productName} fill className="object-cover" />
+            {(item.productImage || item.image)
+              ? <Image src={item.productImage || item.image} alt={item.productName || item.name} fill className="object-cover" />
               : <Package className="h-4 w-4 text-slate-400 m-auto mt-4" />
             }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">{item.productName}</p>
+            <p className="text-xs font-bold text-slate-900 truncate">{item.productName || item.name}</p>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {item.size && <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">Size: {item.size}</span>}
-              {item.color && <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{item.color}</span>}
+              {(item.color) && <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{item.color}</span>}
               <span className="text-[9px] text-slate-400 font-medium">Qty: {item.quantity}</span>
             </div>
           </div>
@@ -141,6 +150,36 @@ export default function OrdersAdminPage() {
   const [courierName, setCourierName] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [boutiqueSettings, setBoutiqueSettings] = useState<BoutiqueSettings | null>(null);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
+
+  // Fetch boutique settings for invoice branding
+  React.useEffect(() => {
+    if (db) {
+      getBoutiqueSettings(db).then(setBoutiqueSettings);
+    }
+  }, [db]);
+
+  const handleDownloadInvoice = async (order: WithId<OrderData>) => {
+    if (!db) return;
+    setIsGeneratingInvoice(true);
+    try {
+      // Fetch full items list for the invoice
+      const itemsSnap = await getDocs(getOrderItemsQuery(db, order.userId, order.id));
+      const items = itemsSnap.docs.map(d => d.data() as OrderItemData);
+      
+      // Fallback to order.items if subcollection is empty
+      const finalItems = items.length > 0 ? items : (order.items || []);
+      
+      await generateInvoicePDF(order, finalItems as OrderItemData[], boutiqueSettings);
+      toast({ title: 'Invoice Ready', description: 'Your invoice has been generated and downloaded.' });
+    } catch (error) {
+      console.error('Invoice generation failed:', error);
+      toast({ variant: 'destructive', title: 'Generation Failed', description: 'Could not create the invoice PDF.' });
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -156,7 +195,11 @@ export default function OrdersAdminPage() {
     setFilter, filters,
     selectedIds, toggleSelect, toggleSelectAll, setSelectedIds
   } = useDataTable<WithId<OrderData>>({
-    data: orders ?? [],
+    data: (orders ?? []).map(o => {
+      const orderStatus = (o.orderStatus || (o as any).status || 'PENDING').toUpperCase() as OrderData['orderStatus'];
+      const paymentStatus = (o.paymentStatus || (o as any).paymentStatus || 'PENDING').toUpperCase() as OrderData['paymentStatus'];
+      return { ...o, orderStatus, paymentStatus };
+    }),
     searchFields: ['id', 'name', 'phone'],
     initialSort: { key: 'createdAt', direction: 'desc' }
   });
@@ -521,14 +564,41 @@ export default function OrdersAdminPage() {
         <SheetContent className="sm:max-w-xl overflow-y-auto no-scrollbar">
           {selectedOrder && (
             <>
-              <SheetHeader className="pb-6 border-b">
+              <SheetHeader className="pb-6 border-b relative">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
                   <ClipboardList className="h-3 w-3" /> Order Details
                 </div>
                 <SheetTitle className="text-2xl font-headline font-bold uppercase font-mono">{selectedOrder.id}</SheetTitle>
                 <SheetDescription className="text-xs">
                   Placed {formatDate(selectedOrder.createdAt, true)}
+                  {selectedOrder.trackingNumber && (
+                    <Link 
+                      href={getTrackingUrl(selectedOrder.courierName, selectedOrder.trackingNumber)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      (Track <ExternalLink className="h-2 w-2" />)
+                    </Link>
+                  )}
                 </SheetDescription>
+
+                {/* Download Button in Header */}
+                <div className="absolute right-6 top-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-full h-9 px-4 text-[10px] font-bold uppercase tracking-widest border-accent/20 text-accent hover:bg-accent hover:text-white transition-all shadow-sm"
+                    disabled={isGeneratingInvoice}
+                    onClick={() => handleDownloadInvoice(selectedOrder)}
+                  >
+                    {isGeneratingInvoice ? (
+                      <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Generating...</>
+                    ) : (
+                      <><Download className="mr-2 h-3 w-3" /> Invoice</>
+                    )}
+                  </Button>
+                </div>
               </SheetHeader>
 
               <div className="py-8 space-y-8">
@@ -556,9 +626,9 @@ export default function OrdersAdminPage() {
                       <h4 className="text-sm font-bold text-amber-900 uppercase tracking-widest">UPI Verification Required</h4>
                       <p className="text-xs text-amber-700 mt-1">Please confirm you've received ₹{selectedOrder.total.toLocaleString()} from {selectedOrder.name}.</p>
                     </div>
-                    {selectedOrder.paymentScreenshotUrl && (
+                    {(selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl) && (
                       <div className="relative aspect-[3/4] w-full max-w-[200px] rounded-xl overflow-hidden shadow-md border-4 border-white">
-                        <Image src={selectedOrder.paymentScreenshotUrl} alt="UPI Screenshot" fill className="object-contain bg-white" />
+                        <Image src={selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl} alt="UPI Screenshot" fill className="object-contain bg-white" />
                       </div>
                     )}
                     <Button onClick={() => handleVerifyPayment(selectedOrder)} disabled={isUpdating} className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-amber-200 transition-all">
@@ -598,7 +668,7 @@ export default function OrdersAdminPage() {
 
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Items Ordered</h3>
-                  <OrderItemsList userId={selectedOrder.userId} orderId={selectedOrder.id} />
+                  <OrderItemsList userId={selectedOrder.userId} orderId={selectedOrder.id} fallbackItems={selectedOrder.items} />
                 </div>
 
                 <div className="space-y-3">
