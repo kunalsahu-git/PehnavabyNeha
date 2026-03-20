@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { getReviewsByProductIdQuery, createReview, type ReviewData } from '@/firebase/firestore/reviews';
+import { getApprovedReviewsByProductIdQuery, createReview, type ReviewData } from '@/firebase/firestore/reviews';
 import type { WithId } from '@/firebase/firestore/use-collection';
 import { cn } from '@/lib/utils';
 
@@ -21,9 +21,12 @@ export function ProductReviews({ productId }: { productId: string }) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const reviewsQuery = useMemoFirebase(() => db ? getReviewsByProductIdQuery(db, productId) : null, [db, productId]);
+  const reviewsQuery = useMemoFirebase(() => db ? getApprovedReviewsByProductIdQuery(db, productId) : null, [db, productId]);
   const { data: rawReviews, isLoading, error } = useCollection<ReviewData>(reviewsQuery);
-  const reviews = (rawReviews ?? []) as WithId<ReviewData>[];
+  // Filter APPROVED + sort by createdAt desc client-side (avoids composite index requirement)
+  const reviews = (rawReviews ?? [])
+    .filter(r => r.status === 'APPROVED')
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)) as WithId<ReviewData>[];
 
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
   const [rating, setRating] = useState(0);
@@ -70,7 +73,7 @@ export function ProductReviews({ productId }: { productId: string }) {
         rating,
         comment: comment.trim(),
       });
-      toast({ title: 'Review Submitted', description: 'Thank you for your feedback!' });
+      toast({ title: 'Review Submitted', description: 'Thank you! Your review will appear after admin approval.' });
       setIsWriteModalOpen(false);
       setRating(0);
       setComment('');

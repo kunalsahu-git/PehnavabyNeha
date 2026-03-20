@@ -155,7 +155,7 @@ export default function AboutPage() {
             <h2 className="text-4xl md:text-6xl font-headline font-bold">Become part of <br /> the story.</h2>
             <p className="text-white/60 max-w-xl mx-auto">Join our community of style enthusiasts and heritage lovers.</p>
             <Button asChild className="rounded-full bg-accent hover:bg-accent/90 text-white font-bold h-14 px-12 uppercase text-xs tracking-widest transition-transform hover:scale-105">
-              <Link href="/account/login">Join The Boutique</Link>
+              <Link href="/contact?inquiry=studio-visit">Visit Our Studio</Link>
             </Button>
           </div>
           {/* Decorative Circle */}

@@ -8,7 +8,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithPhoneNumber,
-  signInAnonymously,
   RecaptchaVerifier,
   type ConfirmationResult,
 } from 'firebase/auth';
@@ -16,20 +15,16 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import {
   ArrowLeft,
   Loader2,
-  Phone,
   RotateCcw,
   AlertCircle,
   ChevronRight,
-  ShieldCheck,
   Zap,
-  FlaskConical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { OTP_MODE, TEST_CREDENTIALS, getTestOtp } from '@/lib/otp-config';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type PhoneStep = 'input' | 'otp';
@@ -41,16 +36,13 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // State
-  const [phoneNumber, setPhoneNumber] = useState(''); 
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [otpValue, setOtpValue] = useState('');
   const [phoneStep, setPhoneStep] = useState<PhoneStep>('input');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
-  const [testOtpHint, setTestOtpHint] = useState<string | null>(null);
-  const [isVerifyingDb, setIsVerifyingDb] = useState(false);
   const [needsPhoneCapture, setNeedsPhoneCapture] = useState(false);
   const [signupPhone, setSignupPhone] = useState('');
   const [isCapturingPhone, setIsCapturingPhone] = useState(false);
@@ -66,13 +58,12 @@ export default function LoginPage() {
 
   async function checkUserPhone(uid: string) {
     try {
-      const ref = doc(db, 'users', uid);
-      const snap = await getDoc(ref);
+      const snap = await getDoc(doc(db, 'users', uid));
       if (!(snap.exists() && snap.data().phone)) {
         setNeedsPhoneCapture(true);
       }
     } catch (e) {
-      console.error("Error checking phone:", e);
+      console.error('Error checking phone:', e);
     }
   }
 
@@ -120,12 +111,12 @@ export default function LoginPage() {
       await ensureUserDoc(user.uid, {
         name: user.displayName || '',
         email: user.email || '',
-        phone: `+91${signupPhone}`
+        phone: `+91${signupPhone}`,
       });
       setNeedsPhoneCapture(false);
-      toast({ title: "Profile Completed", description: "Your WhatsApp number is now linked." });
+      toast({ title: 'Profile Completed', description: 'Your WhatsApp number is now linked.' });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Update Failed", description: e.message });
+      toast({ variant: 'destructive', title: 'Update Failed', description: e.message });
     } finally {
       setIsCapturingPhone(false);
     }
@@ -141,19 +132,10 @@ export default function LoginPage() {
       }
       const confirmation = await signInWithPhoneNumber(auth, fullPhone, recaptchaRef.current);
       confirmationRef.current = confirmation;
-      setTestOtpHint(getTestOtp(fullPhone));
       setPhoneStep('otp');
-      toast({ title: 'OTP sent!' });
+      toast({ title: 'OTP sent!', description: `Verification code sent to +91 ${phoneNumber}` });
     } catch (error: any) {
-      if (error.code === 'auth/admin-restricted-operation' || error.message.includes('billing')) {
-        toast({ 
-          variant: 'destructive', 
-          title: 'Provider Error', 
-          description: 'SMS quota reached or billing disabled. Please use one of the Test Numbers shown below.' 
-        });
-      } else {
-        toast({ variant: 'destructive', title: 'Error', description: error.message });
-      }
+      toast({ variant: 'destructive', title: 'Could not send OTP', description: error.message });
     } finally {
       setIsSendingOtp(false);
     }
@@ -170,30 +152,6 @@ export default function LoginPage() {
       toast({ variant: 'destructive', title: 'Verification Failed', description: error.message });
     } finally {
       setIsVerifyingOtp(false);
-    }
-  }
-
-  async function handleAdminBypass() {
-    try {
-      await signInAnonymously(auth);
-      toast({ title: "Dev Mode: Anonymous Access" });
-      router.push('/admin');
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Bypass Failed", description: e.message });
-    }
-  }
-
-  async function handleVerifyDbConnection() {
-    if (!user) return;
-    setIsVerifyingDb(true);
-    try {
-      const ref = doc(db, 'users', user.uid);
-      await setDoc(ref, { lastConnectionTest: serverTimestamp() }, { merge: true });
-      toast({ title: "Connection Success!", description: "Successfully wrote test data to Firestore." });
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Database Error", description: e.message });
-    } finally {
-      setIsVerifyingDb(false);
     }
   }
 
@@ -246,31 +204,29 @@ export default function LoginPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="text-xs font-bold uppercase tracking-widest">Unauthorized Domain</AlertTitle>
             <AlertDescription className="space-y-3 pt-2">
-              <p className="text-xs">Your current domain is not whitelisted in Firebase.</p>
+              <p className="text-xs">The current domain is not whitelisted in Firebase Authentication.</p>
               <div className="bg-white p-2 rounded-lg border border-red-100 font-mono text-[10px] break-all select-all">{unauthorizedDomain}</div>
-              <p className="text-[10px] italic">Paste this into Authentication {'->'} Settings {'->'} Authorized Domains</p>
             </AlertDescription>
           </Alert>
         )}
 
         {user ? (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="p-6 rounded-2xl bg-secondary/20 border border-primary/10 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary text-white flex items-center justify-center font-headline text-2xl font-bold">{user.displayName?.[0] || user.email?.[0] || '?'}</div>
+              <div className="h-12 w-12 rounded-full bg-primary text-white flex items-center justify-center font-headline text-2xl font-bold">
+                {user.displayName?.[0] || user.email?.[0] || '?'}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold truncate">{user.displayName || user.email || 'Boutique Member'}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">{user.isAnonymous ? 'Guest Access' : 'Verified Profile'}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Verified Profile</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <Button asChild className="w-full h-14 rounded-xl bg-slate-900 hover:bg-black font-bold uppercase text-[10px] tracking-widest gap-2">
-                <Link href="/admin">Go to Admin Panel <ChevronRight className="h-4 w-4" /></Link>
-              </Button>
-              <Button onClick={handleVerifyDbConnection} disabled={isVerifyingDb} variant="outline" className="w-full h-12 rounded-xl border-slate-200 font-bold uppercase text-[9px] tracking-widest gap-2">
-                {isVerifyingDb ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3 text-green-500" />} Verify Live DB Connection
-              </Button>
-              <Button variant="ghost" onClick={() => auth.signOut()} className="text-muted-foreground hover:text-red-500 text-[10px] font-bold uppercase tracking-widest">Sign Out</Button>
-            </div>
+            <Button asChild className="w-full h-14 rounded-xl bg-slate-900 hover:bg-black font-bold uppercase text-[10px] tracking-widest gap-2">
+              <Link href="/account/profile">My Account <ChevronRight className="h-4 w-4" /></Link>
+            </Button>
+            <Button variant="ghost" onClick={() => auth.signOut()} className="w-full text-muted-foreground hover:text-red-500 text-[10px] font-bold uppercase tracking-widest">
+              Sign Out
+            </Button>
           </div>
         ) : (
           <div className="space-y-6">
@@ -282,7 +238,11 @@ export default function LoginPage() {
               )} Continue with Google
             </Button>
 
-            <div className="flex items-center gap-3"><div className="flex-1 h-px bg-slate-100" /><span className="text-[10px] text-slate-400 uppercase tracking-widest">or use phone</span><div className="flex-1 h-px bg-slate-100" /></div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-100" />
+              <span className="text-[10px] text-slate-400 uppercase tracking-widest">or use phone</span>
+              <div className="flex-1 h-px bg-slate-100" />
+            </div>
 
             <div className="space-y-4">
               {phoneStep === 'input' ? (
@@ -297,36 +257,24 @@ export default function LoginPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <p className="text-xs text-center text-muted-foreground">OTP sent to <span className="font-bold text-foreground">+91 {phoneNumber}</span></p>
                   <Input type="text" inputMode="numeric" placeholder="Enter 6-digit OTP" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))} className="h-14 rounded-xl text-center tracking-[0.5em] font-bold text-xl" />
-                  {testOtpHint && <p className="text-[10px] text-amber-600 font-bold text-center">Dev Hint: Use OTP {testOtpHint}</p>}
                   <Button onClick={handleVerifyOtp} disabled={isVerifyingOtp || otpValue.length !== 6} className="w-full h-12 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase tracking-widest">
                     {isVerifyingOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify & Log In'}
                   </Button>
-                  <Button variant="ghost" onClick={() => setPhoneStep('input')} className="w-full text-[10px] font-bold uppercase tracking-widest text-muted-foreground"><RotateCcw className="h-3 w-3 mr-2" /> Change Number</Button>
+                  <Button variant="ghost" onClick={() => { setPhoneStep('input'); setOtpValue(''); }} className="w-full text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <RotateCcw className="h-3 w-3 mr-2" /> Change Number
+                  </Button>
                 </div>
               )}
             </div>
-
-            <div className="pt-4 border-t border-slate-50 space-y-4">
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 space-y-2">
-                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-widest flex items-center gap-2"><FlaskConical className="h-3 w-3" /> Development Credentials</p>
-                <div className="grid grid-cols-1 gap-1">
-                  {TEST_CREDENTIALS.map(c => (
-                    <button key={c.phone} onClick={() => setPhoneNumber(c.phone.slice(3))} className="text-[10px] text-left hover:text-primary transition-colors flex justify-between group">
-                      <span className="font-mono">{c.phone}</span>
-                      <span className="opacity-0 group-hover:opacity-100 text-accent font-bold uppercase tracking-tighter">Use this</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <Button onClick={handleAdminBypass} variant="outline" className="w-full h-12 rounded-xl border-dashed border-primary/20 text-primary hover:bg-primary/5 font-bold uppercase text-[10px] tracking-widest gap-2">
-                <Zap className="h-3 w-3" /> Skip to Admin Panel
-              </Button>
-            </div>
           </div>
         )}
+
         <div id="recaptcha-container" />
-        <p className="text-[10px] text-center text-slate-400 leading-relaxed">By continuing, you agree to our <Link href="/policies/terms" className="underline hover:text-primary">Terms</Link> & <Link href="/policies/privacy" className="underline hover:text-primary">Privacy Policy</Link></p>
+        <p className="text-[10px] text-center text-slate-400 leading-relaxed">
+          By continuing, you agree to our <Link href="/policies/terms" className="underline hover:text-primary">Terms</Link> & <Link href="/policies/privacy" className="underline hover:text-primary">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   );

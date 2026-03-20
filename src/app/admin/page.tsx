@@ -6,7 +6,7 @@ import {
   ShoppingBag, IndianRupee, TrendingUp, Package,
   Clock, CheckCircle2, AlertCircle, Loader2,
   ArrowRight, PackageCheck, Truck, Sparkles,
-  LayoutGrid, Tag,
+  LayoutGrid, Tag, AlertTriangle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,8 @@ export default function AdminDashboard() {
   const pendingShipment = allOrders.filter(o => o.orderStatus === 'PENDING' && o.paymentStatus === 'CONFIRMED').length;
   const processingCount = allOrders.filter(o => o.orderStatus === 'PROCESSING').length;
   const liveProducts = allProducts.filter(p => p.published).length;
+  const LOW_STOCK_THRESHOLD = 5;
+  const lowStockProducts = allProducts.filter(p => p.stock !== undefined && p.stock !== null && p.stock <= LOW_STOCK_THRESHOLD && p.published);
   const avgOrderValue = allOrders.length
     ? Math.round(allOrders.reduce((s, o) => s + o.total, 0) / allOrders.length)
     : 0;
@@ -185,6 +187,23 @@ export default function AdminDashboard() {
             ))
         }
       </div>
+
+      {/* Low Stock Alert */}
+      {!isLoading && lowStockProducts.length > 0 && (
+        <div className="p-5 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4">
+          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-red-900 mb-2">Low Stock Alert — {lowStockProducts.length} product{lowStockProducts.length > 1 ? 's' : ''} running low</p>
+            <div className="flex flex-wrap gap-2">
+              {lowStockProducts.map(p => (
+                <Link key={p.id} href="/admin/products" className="text-[10px] font-black uppercase tracking-tighter bg-red-100 text-red-700 hover:bg-red-200 px-2.5 py-1 rounded-full transition-colors">
+                  {p.name} — {p.stock} left
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Catalog quick-stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

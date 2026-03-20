@@ -1,8 +1,9 @@
 'use client';
 
-import { use, useState, useRef } from "react";
+import { use, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronRight, Minus, Plus, Heart, Share2, RotateCcw, Truck,
   Banknote, ShieldCheck, Lock, MapPin, ArrowRight, Star, Loader2
@@ -16,6 +17,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/firebase";
+import { toggleWishlistItem, getUserWishlist } from "@/firebase/firestore/wishlist";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ProductCard } from "@/components/store/ProductCard";
 import { ProductReviews } from "@/components/store/ProductReviews";
@@ -24,6 +28,7 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import {
   getProductBySlugQuery, getProductsByCategoryQuery, type ProductData,
 } from "@/firebase/firestore/products";
+import { normalizeColor, colorToCSS, isLightColor } from "@/lib/colors";
 import type { WithId } from "@/firebase/firestore/use-collection";
 
 const REVIEWS = [
@@ -35,13 +40,18 @@ const REVIEWS = [
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const db = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
   const { addItem } = useCart();
+  const { toast } = useToast();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const zoomRef = useRef<HTMLDivElement>(null);
 
   // Fetch product by slug
@@ -57,9 +67,51 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [initialized, setInitialized] = useState(false);
   if (product && !initialized) {
     if (product.sizes?.length) setSelectedSize(product.sizes[0]);
-    if (product.colors?.length) setSelectedColor(product.colors[0]);
+    if (product.colors?.length) setSelectedColor(normalizeColor(product.colors[0]).name);
     setInitialized(true);
   }
+
+  // Load wishlist state when product + user are ready
+  useEffect(() => {
+    if (!product || !db || !auth?.currentUser) return;
+    getUserWishlist(db, auth.currentUser.uid).then(ids => {
+      setIsWishlisted(ids.includes(product.id));
+    }).catch(() => {});
+  }, [product?.id, db, auth?.currentUser?.uid]);
+
+  const handleWishlistToggle = async () => {
+    if (!auth?.currentUser) {
+      toast({ title: 'Login required', description: 'Please log in to save items to your wishlist.' });
+      return;
+    }
+    if (!db || !product) return;
+    setWishlistLoading(true);
+    try {
+      const next = !isWishlisted;
+      await toggleWishlistItem(db, auth.currentUser.uid, product.id, next);
+      setIsWishlisted(next);
+      toast({ title: next ? 'Added to wishlist' : 'Removed from wishlist', description: next ? `${product.name} saved.` : `${product.name} removed.` });
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not update wishlist. Try again.' });
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = product?.name ?? 'Check this out';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // user cancelled — ignore
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied!', description: 'Product link copied to clipboard.' });
+    }
+  };
 
   // Related products
   const relatedQuery = useMemoFirebase(
@@ -97,7 +149,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
+  const stock = product.stock ?? null; // null means "not tracked / unlimited"
+  const isOutOfStock = stock !== null && stock === 0;
+  const maxQty = stock !== null ? stock : 99;
+  const isLowStock = stock !== null && stock > 0 && stock <= 5;
+
   const handleAddToCart = () => {
+    if (isOutOfStock) return;
     addItem({
       id: product.id,
       name: product.name,
@@ -107,6 +165,21 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       size: selectedSize,
       color: selectedColor,
     });
+    toast({ title: 'Added to bag', description: `${quantity} × ${product.name}` });
+  };
+
+  const handleBuyNow = () => {
+    if (isOutOfStock) return;
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity,
+      size: selectedSize,
+      color: selectedColor,
+    });
+    router.push('/checkout');
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -172,8 +245,23 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               <div className="flex items-center justify-between">
                 <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Pehnava - She is Special</span>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border"><Heart className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border"><Share2 className="h-4 w-4" /></Button>
+                  <Button
+                    variant="ghost" size="icon"
+                    className={cn("h-8 w-8 rounded-full border transition-colors", isWishlisted && "border-rose-300 bg-rose-50")}
+                    onClick={handleWishlistToggle}
+                    disabled={wishlistLoading}
+                    title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    <Heart className={cn("h-4 w-4 transition-colors", isWishlisted ? "fill-rose-500 text-rose-500" : "text-muted-foreground")} />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-8 w-8 rounded-full border"
+                    onClick={handleShare}
+                    title="Share product"
+                  >
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-headline font-bold leading-tight">{product.name}</h1>
@@ -217,38 +305,86 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               {/* Color */}
               {product.colors && product.colors.length > 0 && (
                 <div className="space-y-3 md:space-y-4">
-                  <label className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Color: <span className="text-primary">{selectedColor}</span></label>
-                  <div className="flex gap-2.5 md:gap-3">
-                    {product.colors.map(color => (
-                      <button key={color} onClick={() => setSelectedColor(color)}
-                        className={cn("w-8 h-8 md:w-10 md:h-10 rounded-full border-2 p-1 transition-all",
-                          selectedColor === color ? "border-primary" : "border-transparent")}
-                        title={color}>
-                        <div className="w-full h-full rounded-full border shadow-inner" style={{ backgroundColor: color.toLowerCase() }} />
-                      </button>
-                    ))}
+                  <label className="text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                    Colour: <span className="text-primary">{selectedColor}</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2.5 md:gap-3">
+                    {product.colors.map(raw => {
+                      const color = normalizeColor(raw);
+                      const active = selectedColor === color.name;
+                      return (
+                        <button
+                          key={color.name}
+                          onClick={() => setSelectedColor(color.name)}
+                          title={color.name}
+                          className={cn(
+                            "relative h-9 w-9 md:h-10 md:w-10 rounded-full transition-all duration-150",
+                            "ring-offset-2 focus:outline-none focus:ring-2 focus:ring-primary/50",
+                            active ? "ring-2 ring-primary scale-110 shadow-md" : "hover:scale-105 hover:shadow-sm",
+                            isLightColor(color.hex) && "border border-slate-300"
+                          )}
+                          style={{ background: colorToCSS(color.hex) }}
+                        >
+                          {active && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <svg viewBox="0 0 12 12" className={cn("h-3 w-3", isLightColor(color.hex) ? "text-slate-800" : "text-white")} fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="2,6 5,9 10,3" />
+                              </svg>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
+              {/* Stock status */}
+              {isOutOfStock ? (
+                <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-destructive bg-destructive/10 px-4 py-2 rounded-full">
+                  <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                  Out of Stock
+                </div>
+              ) : isLowStock ? (
+                <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-full">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                  Only {stock} left — order soon
+                </div>
+              ) : null}
+
               {/* Quantity + CTA */}
               <div className="space-y-4 md:space-y-6">
                 <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6">
-                  <div className="flex items-center rounded-full border-2 border-border h-12 md:h-14 px-3 bg-secondary/10 w-full sm:w-auto justify-between sm:justify-start">
-                    <Button variant="ghost" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="h-8 w-8 rounded-full hover:bg-primary/10">
+                  <div className={cn(
+                    "flex items-center rounded-full border-2 h-12 md:h-14 px-3 w-full sm:w-auto justify-between sm:justify-start",
+                    isOutOfStock ? "border-border/50 bg-secondary/5 opacity-50" : "border-border bg-secondary/10"
+                  )}>
+                    <Button variant="ghost" size="icon"
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      disabled={isOutOfStock || quantity <= 1}
+                      className="h-8 w-8 rounded-full hover:bg-primary/10">
                       <Minus className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                     <span className="w-10 md:w-12 text-center font-bold text-sm md:text-base">{quantity}</span>
-                    <Button variant="ghost" size="icon" onClick={() => setQuantity(q => q + 1)} className="h-8 w-8 rounded-full hover:bg-primary/10">
+                    <Button variant="ghost" size="icon"
+                      onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                      disabled={isOutOfStock || quantity >= maxQty}
+                      className="h-8 w-8 rounded-full hover:bg-primary/10">
                       <Plus className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                   </div>
-                  <Button onClick={handleAddToCart}
-                    className="w-full sm:flex-1 h-12 md:h-14 bg-white text-primary border-primary hover:bg-primary/5 border-2 font-bold rounded-full text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em]">
-                    ADD TO BAG
+                  {stock !== null && (
+                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider hidden sm:block">
+                      {isOutOfStock ? 'Unavailable' : `Max ${maxQty}`}
+                    </span>
+                  )}
+                  <Button onClick={handleAddToCart} disabled={isOutOfStock}
+                    className="w-full sm:flex-1 h-12 md:h-14 bg-white text-primary border-primary hover:bg-primary/5 border-2 font-bold rounded-full text-[10px] md:text-xs tracking-[0.15em] md:tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isOutOfStock ? 'OUT OF STOCK' : 'ADD TO BAG'}
                   </Button>
                 </div>
-                <Button className="w-full h-14 md:h-16 bg-slate-900 text-white hover:bg-black font-bold rounded-full flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm tracking-[0.1em] shadow-xl active:scale-95 transition-transform">
+                <Button onClick={handleBuyNow} disabled={isOutOfStock}
+                  className="w-full h-14 md:h-16 bg-slate-900 text-white hover:bg-black font-bold rounded-full flex items-center justify-center gap-2 md:gap-3 text-xs md:text-sm tracking-[0.1em] shadow-xl active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
                   BUY IT NOW
                   <div className="flex items-center gap-1 opacity-80 border-l border-white/20 pl-2 md:pl-3">
                     <ArrowRight className="h-3 w-3 md:h-4 md:w-4" />

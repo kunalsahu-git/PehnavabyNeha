@@ -23,6 +23,7 @@ import { useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase
 import { doc, collection, query, where } from "firebase/firestore";
 import { getAllCategoriesQuery, type CategoryData } from "@/firebase/firestore/categories";
 import { getNewArrivalsQuery, getSaleProductsQuery, type ProductData } from "@/firebase/firestore/products";
+import { normalizeColor, colorToCSS, isLightColor } from "@/lib/colors";
 import { getPublishedHeroSlidesQuery, type HeroSlideData } from "@/firebase/firestore/hero_slides";
 import { getPublishedStudioReelsQuery, type StudioReelData } from "@/firebase/firestore/studio_reels";
 
@@ -509,15 +510,36 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Color: {selectedColor}</label>
-                  <div className="flex flex-wrap gap-2">
-                    {fp.colors.map(color => (
-                      <button key={color} onClick={() => setSelectedColor(color)}
-                        className={cn("px-3 h-9 rounded border-2 text-xs font-medium transition-all",
-                          selectedColor === color ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary/50")}>
-                        {color}
-                      </button>
-                    ))}
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Colour: <span className="text-primary">{selectedColor}</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2.5">
+                    {fp.colors.map(raw => {
+                      const color = normalizeColor(raw);
+                      const active = selectedColor === color.name;
+                      return (
+                        <button
+                          key={color.name}
+                          title={color.name}
+                          onClick={() => setSelectedColor(color.name)}
+                          className={cn(
+                            "relative h-9 w-9 rounded-full transition-all duration-150",
+                            "ring-offset-2 focus:outline-none focus:ring-2 focus:ring-primary/50",
+                            active ? "ring-2 ring-primary scale-110 shadow-md" : "hover:scale-105 hover:shadow-sm",
+                            isLightColor(color.hex) && "border border-slate-300"
+                          )}
+                          style={{ background: colorToCSS(color.hex) }}
+                        >
+                          {active && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <svg viewBox="0 0 12 12" className={cn("h-3 w-3", isLightColor(color.hex) ? "text-slate-800" : "text-white")} fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <polyline points="2,6 5,9 10,3" />
+                              </svg>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="flex items-center gap-6">

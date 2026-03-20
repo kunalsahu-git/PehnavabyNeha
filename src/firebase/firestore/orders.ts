@@ -6,6 +6,7 @@ import {
   where,
   doc,
   updateDoc,
+  increment,
   serverTimestamp,
   type Firestore,
 } from 'firebase/firestore';
@@ -42,7 +43,7 @@ export type OrderItemData = {
 
 /** List all orders across all users (Admin collectionGroup) */
 export function getAllOrdersQuery(db: Firestore) {
-  return query(collectionGroup(db, 'orders'), orderBy('createdAt', 'desc'));
+  return collectionGroup(db, 'orders');
 }
 
 /** List orders for a specific user */
@@ -84,6 +85,20 @@ export async function updateOrderTracking(
     trackingNumber,
     updatedAt: serverTimestamp(),
   });
+}
+
+/** Decrement product stock when payment is verified */
+export async function decrementStockForOrder(
+  db: Firestore,
+  items: { productId: string; quantity: number }[]
+) {
+  return Promise.all(
+    items.map(item =>
+      updateDoc(doc(db, 'products', item.productId), {
+        stock: increment(-item.quantity),
+      })
+    )
+  );
 }
 
 /** Verify payment */

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -17,13 +18,16 @@ import {
   ShieldCheck,
   Loader2,
   Tag,
-  AlertTriangle,
   ExternalLink,
-  Database,
   Images,
   Star,
   Film,
   Navigation,
+  BarChart3,
+  RotateCcw,
+  IndianRupee,
+  MessageSquare,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -32,22 +36,52 @@ import { doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 
-const SHOW_SEED_DATA = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-const ADMIN_NAV = [
-  { name: 'Overview', href: '/admin', icon: LayoutDashboard },
-  { name: 'Orders', href: '/admin/orders', icon: ClipboardList },
-  { name: 'Products', href: '/admin/products', icon: ShoppingBag },
-  { name: 'Categories', href: '/admin/categories', icon: Layers },
-  { name: 'Collections', href: '/admin/collections', icon: Tag },
-  { name: 'Coupons', href: '/admin/coupons', icon: Tag },
-  { name: 'Navigation', href: '/admin/navigation', icon: Navigation },
-  { name: 'Hero Slides', href: '/admin/hero-slides', icon: Images },
-  { name: 'Featured Product', href: '/admin/featured-product', icon: Star },
-  { name: 'Studio Reels', href: '/admin/studio-reels', icon: Film },
-  { name: 'Admin Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
-  ...(SHOW_SEED_DATA ? [{ name: 'Seed Data', href: '/admin/seed', icon: Database }] : []),
+type NavItem = { name: string; href: string; icon: React.ElementType };
+type NavGroup = { label: string; icon: React.ElementType; items: NavItem[] };
+
+const ADMIN_NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Operations',
+    icon: ClipboardList,
+    items: [
+      { name: 'Overview',      href: '/admin',           icon: LayoutDashboard },
+      { name: 'Analytics',     href: '/admin/analytics', icon: BarChart3 },
+      { name: 'Orders',        href: '/admin/orders',    icon: ClipboardList },
+      { name: 'Returns',       href: '/admin/returns',   icon: RotateCcw },
+      { name: 'Refund Ledger', href: '/admin/refunds',   icon: IndianRupee },
+      { name: 'Reviews',       href: '/admin/reviews',   icon: MessageSquare },
+      { name: 'Messages',      href: '/admin/messages',  icon: Mail },
+    ],
+  },
+  {
+    label: 'Catalogue',
+    icon: ShoppingBag,
+    items: [
+      { name: 'Products',    href: '/admin/products',    icon: ShoppingBag },
+      { name: 'Categories',  href: '/admin/categories',  icon: Layers },
+      { name: 'Collections', href: '/admin/collections', icon: Tag },
+      { name: 'Coupons',     href: '/admin/coupons',     icon: Tag },
+    ],
+  },
+  {
+    label: 'Storefront',
+    icon: Images,
+    items: [
+      { name: 'Navigation',        href: '/admin/navigation',       icon: Navigation },
+      { name: 'Hero Slides',       href: '/admin/hero-slides',      icon: Images },
+      { name: 'Featured Product',  href: '/admin/featured-product', icon: Star },
+      { name: 'Studio Reels',      href: '/admin/studio-reels',     icon: Film },
+    ],
+  },
+  {
+    label: 'Configuration',
+    icon: Settings,
+    items: [
+      { name: 'Admin Users', href: '/admin/users',    icon: Users },
+      { name: 'Settings',    href: '/admin/settings', icon: Settings },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -58,6 +92,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Groups whose active child is matched are auto-expanded; others start collapsed
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    ADMIN_NAV_GROUPS.forEach(g => {
+      if (g.items.some(i => i.href === pathname || (i.href !== '/admin' && pathname.startsWith(i.href)))) {
+        initial.add(g.label);
+      }
+    });
+    // Default: open Operations so the sidebar doesn't look empty on first load
+    initial.add('Operations');
+    return initial;
+  });
+
+  const toggleGroup = (label: string) =>
+    setOpenGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+
+  const isItemActive = (href: string) =>
+    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+
   // Security Check: Verify Admin Role
   const adminRoleRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -66,12 +123,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const { data: adminRole, isLoading: isAdminChecking } = useDoc(adminRoleRef);
 
+  // useDoc initializes isLoading:false — on the first render after adminRoleRef becomes
+  // non-null, isAdminChecking is still false before the effect inside useDoc has run.
+  // We track whether the check has ever been in-flight so we only redirect after the
+  // Firestore snapshot has actually returned (not prematurely on that one-render gap).
+  const roleCheckStarted = React.useRef(false);
+  if (isAdminChecking) roleCheckStarted.current = true;
+
   useEffect(() => {
-    // Redirect only when we're sure the user isn't authenticated
     if (!isUserLoading && !user) {
       router.push('/account/login');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    // Guard: only redirect once the Firestore check has started AND finished with no role.
+    if (!isUserLoading && roleCheckStarted.current && adminRoleRef && !isAdminChecking && user && !adminRole) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, adminRoleRef, isAdminChecking, adminRole, router]);
 
   // Fix: Radix UI sets pointer-events:none on <body> while a Sheet/Dialog is open.
   // After an async save closes the modal, Radix sometimes fails to clean this up,
@@ -107,8 +177,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/');
   };
 
-  // Show loader during initial auth check or while confirming admin privileges
-  if (isUserLoading || (user && isAdminChecking)) {
+  // Show loader while: auth is resolving, db/uid not ready yet, check not started yet, or role fetch in progress
+  if (isUserLoading || !user || !adminRoleRef || !roleCheckStarted.current || isAdminChecking) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -117,54 +187,84 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // If no user exists yet, stop rendering to prevent children from running unauthorized queries
-  if (!user) {
+  // Role check is complete — if no role document found, render nothing (redirect effect handles it)
+  if (!adminRole) {
     return null;
   }
-
-  // DEVELOPMENT BYPASS: If user is logged in but not an admin (no document in roles_admin), 
-  // allow access for now but show a warning banner as requested.
-  const isDevBypass = !!user && !adminRole;
 
   return (
     <div className="flex min-h-screen bg-slate-50/50">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-slate-900 text-white sticky top-0 h-screen overflow-hidden">
         <div className="p-8 shrink-0">
-          <Link href="/admin" className="flex flex-col items-start group">
-            <span className="text-2xl font-headline font-bold text-white tracking-tighter leading-none">PEHNAVA</span>
-            <span className="text-[9px] font-headline font-medium tracking-[0.4em] text-accent -mt-1 uppercase">Admin Panel</span>
+          <Link href="/admin" className="flex items-center gap-3 group">
+            <Image src="/images/logo.svg" alt="Pehnava" width={36} height={36} className="h-9 w-9 object-contain brightness-0 invert" />
+            <div className="flex flex-col leading-none">
+              <span className="text-xl font-headline font-bold text-white tracking-tighter">PEHNAVA</span>
+              <span className="text-[8px] font-headline font-medium tracking-[0.35em] text-accent uppercase">Admin Panel</span>
+            </div>
           </Link>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-1 sidebar-scrollbar">
-          {ADMIN_NAV.map((item) => {
-            const isActive = pathname === item.href;
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-0.5 sidebar-scrollbar">
+          {ADMIN_NAV_GROUPS.map((group) => {
+            const isOpen = openGroups.has(group.label);
+            const hasActive = group.items.some(i => isItemActive(i.href));
             return (
-              <Link 
-                key={item.name} 
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium",
-                  isActive 
-                    ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
+              <div key={group.label}>
+                {/* Group header */}
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-bold uppercase tracking-widest",
+                    hasActive
+                      ? "text-white/90 bg-white/8"
+                      : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                  )}
+                >
+                  <group.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  <ChevronRight className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200 shrink-0",
+                    isOpen ? "rotate-90" : ""
+                  )} />
+                </button>
+
+                {/* Child items */}
+                {isOpen && (
+                  <div className="ml-3 pl-3 border-l border-white/8 mt-0.5 mb-1 space-y-0.5">
+                    {group.items.map((item) => {
+                      const active = isItemActive(item.href);
+                      return (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all text-sm font-medium",
+                            active
+                              ? "bg-primary text-white shadow-md shadow-primary/25"
+                              : "text-slate-400 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <item.icon className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-slate-500")} />
+                          {item.name}
+                          {active && <ChevronRight className="ml-auto h-3.5 w-3.5" />}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-slate-500")} />
-                {item.name}
-                {isActive && <ChevronRight className="ml-auto h-4 w-4" />}
-              </Link>
+              </div>
             );
           })}
-          
-          <Separator className="my-4 bg-white/10" />
-          
-          <Link 
+
+          <Separator className="my-3 bg-white/10" />
+
+          <Link
             href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium text-accent hover:bg-white/5"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium text-accent hover:bg-white/5"
           >
-            <ExternalLink className="h-5 w-5" />
+            <ExternalLink className="h-4 w-4" />
             View Website
           </Link>
         </nav>
@@ -192,9 +292,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white flex items-center justify-between px-4 z-[100] border-b border-white/10">
-        <Link href="/admin" className="flex flex-col">
-          <span className="text-xl font-headline font-bold tracking-tight">PEHNAVA</span>
-          <span className="text-[8px] tracking-[0.3em] text-accent uppercase font-bold">Admin Panel</span>
+        <Link href="/admin" className="flex items-center gap-2.5">
+          <Image src="/images/logo.svg" alt="Pehnava" width={30} height={30} className="h-7 w-7 object-contain brightness-0 invert" />
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-headline font-bold tracking-tighter">PEHNAVA</span>
+            <span className="text-[7px] tracking-[0.3em] text-accent uppercase font-bold">Admin Panel</span>
+          </div>
         </Link>
         <Button 
           variant="ghost" 
@@ -222,28 +325,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           onClick={e => e.stopPropagation()}
         >
           <div className="p-8 border-b border-white/5">
-            <Link href="/admin" onClick={() => setIsSidebarOpen(false)} className="flex flex-col">
-              <span className="text-2xl font-headline font-bold text-white tracking-tighter">PEHNAVA</span>
-              <span className="text-[9px] font-headline font-medium tracking-[0.4em] text-accent uppercase">Boutique Admin</span>
+            <Link href="/admin" onClick={() => setIsSidebarOpen(false)} className="flex items-center gap-3">
+              <Image src="/images/logo.svg" alt="Pehnava" width={34} height={34} className="h-8 w-8 object-contain brightness-0 invert" />
+              <div className="flex flex-col leading-none">
+                <span className="text-xl font-headline font-bold text-white tracking-tighter">PEHNAVA</span>
+                <span className="text-[8px] font-headline font-medium tracking-[0.35em] text-accent uppercase">Admin Panel</span>
+              </div>
             </Link>
           </div>
 
-          <nav className="flex-1 overflow-y-auto p-4 space-y-1 sidebar-scrollbar mt-4 max-h-[calc(100vh-220px)]">
-            {ADMIN_NAV.map((item) => {
-              const isActive = pathname === item.href;
+          <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5 sidebar-scrollbar mt-2 max-h-[calc(100vh-180px)]">
+            {ADMIN_NAV_GROUPS.map((group) => {
+              const isOpen = openGroups.has(group.label);
+              const hasActive = group.items.some(i => isItemActive(i.href));
               return (
-                <Link 
-                  key={item.name} 
-                  href={item.href}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all text-sm font-medium",
-                    isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-400 hover:bg-white/5"
+                <div key={group.label}>
+                  <button
+                    onClick={() => toggleGroup(group.label)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-xs font-bold uppercase tracking-widest",
+                      hasActive ? "text-white/90" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                    )}
+                  >
+                    <group.icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform duration-200 shrink-0", isOpen ? "rotate-90" : "")} />
+                  </button>
+                  {isOpen && (
+                    <div className="ml-3 pl-3 border-l border-white/8 mt-0.5 mb-1 space-y-0.5">
+                      {group.items.map((item) => {
+                        const active = isItemActive(item.href);
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={cn(
+                              "flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all text-sm font-medium",
+                              active ? "bg-primary text-white shadow-md shadow-primary/25" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            <item.icon className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-slate-500")} />
+                            {item.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   )}
-                >
-                  <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-slate-500")} />
-                  {item.name}
-                </Link>
+                </div>
               );
             })}
           </nav>
@@ -263,20 +392,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0">
-        {/* Warning Banner for Bypass (Optional) */}
-        {isDevBypass && (
-          <div className="bg-amber-50 border-b border-amber-100 px-8 py-3 flex items-center gap-3 shrink-0 mt-16 lg:mt-0">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <p className="text-[10px] font-bold text-amber-800 uppercase tracking-widest">
-              Development Bypass Active: No role found in `roles_admin`. Permissions limited.
-            </p>
-          </div>
-        )}
-
-        <div className={cn(
-          "flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto",
-          !isDevBypass && "mt-16 lg:mt-0"
-        )}>
+        <div className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto mt-16 lg:mt-0">
           {children}
         </div>
       </main>

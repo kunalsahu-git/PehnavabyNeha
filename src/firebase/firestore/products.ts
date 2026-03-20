@@ -10,6 +10,9 @@ import {
   serverTimestamp,
   type Firestore,
 } from 'firebase/firestore';
+import type { ProductColor } from '@/lib/colors';
+
+export type { ProductColor };
 
 export type ProductData = {
   slug: string;
@@ -28,7 +31,8 @@ export type ProductData = {
   isNew?: boolean;
   isSale?: boolean;
   isBestseller?: boolean;
-  colors?: string[];
+  /** Structured colors with name + hex. Legacy string[] also accepted (normalized at read-time). */
+  colors?: ProductColor[];
   sizes?: string[];
   fabric?: string;
   stock?: number;
@@ -145,4 +149,4 @@ export const CATEGORY_SLUG_MAP: Record<string, string> = {
   'Accessories': 'accessories',
 };
 
-export const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'Free Size'];
+export const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Free Size'];

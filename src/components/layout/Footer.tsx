@@ -102,9 +102,16 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand Col */}
           <div className="flex flex-col space-y-6">
-            <Link href="/" className="flex flex-col items-start">
-              <span className="text-3xl font-headline font-bold text-primary tracking-tighter">PEHNAVA</span>
-              <span className="text-xs font-headline font-medium tracking-[0.2em] text-accent -mt-1 uppercase">by Neha</span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <Image src="/images/logo.svg" alt="Pehnava by Neha" width={48} height={48} className="h-12 w-12 object-contain" />
+              <div className="flex flex-col leading-none gap-0.5">
+                <span className="text-2xl font-headline font-bold text-primary tracking-tighter">PEHNAVA</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-px flex-1 bg-primary/30" />
+                  <span className="text-[11px] font-headline italic font-semibold text-primary/70 tracking-[0.15em]">by Neha</span>
+                  <div className="h-px flex-1 bg-primary/30" />
+                </div>
+              </div>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Curating luxury South Asian fashion that blends tradition with modern femininity. Every piece tells a story of heritage and handcrafted elegance.
@@ -145,6 +152,15 @@ export function Footer() {
               <button onClick={() => setActivePolicy('privacy')} className="text-sm hover:text-primary transition-colors">Privacy Policy</button>
               <button onClick={() => setActivePolicy('terms')} className="text-sm hover:text-primary transition-colors">Terms of Service</button>
               <Link href="/contact" className="text-sm hover:text-primary transition-colors">Contact Us</Link>
+              <div className="pt-3 border-t border-border/60 w-full">
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                  Admin Panel
+                </Link>
+              </div>
             </nav>
           </div>
 
@@ -165,10 +181,21 @@ export function Footer() {
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} Pehnava by Neha. All Rights Reserved.
           </p>
-          <div className="flex items-center space-x-4 opacity-50">
-             <Image src="https://placehold.co/40x25/png?text=UPI" width={40} height={25} alt="UPI Payment" />
-             <Image src="https://placehold.co/40x25/png?text=VISA" width={40} height={25} alt="Visa" />
-             <Image src="https://placehold.co/40x25/png?text=MC" width={40} height={25} alt="Mastercard" />
+          <div className="flex flex-col items-center md:items-end gap-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Secure Payments</p>
+            <div className="flex items-center gap-3 flex-wrap justify-center md:justify-end">
+              {[
+                { src: '/images/payment/Bhim-Upi-Logo.png', alt: 'BHIM UPI' },
+                { src: '/images/payment/phone-pe.png',       alt: 'PhonePe' },
+                { src: '/images/payment/google-pay.png',     alt: 'Google Pay' },
+                { src: '/images/payment/paytm.png',          alt: 'Paytm' },
+                { src: '/images/payment/amazon-pay.png',     alt: 'Amazon Pay' },
+              ].map(({ src, alt }) => (
+                <div key={alt} className="h-7 w-14 relative grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
+                  <Image src={src} alt={alt} fill className="object-contain" />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

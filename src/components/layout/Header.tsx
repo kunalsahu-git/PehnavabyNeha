@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingBag, Search, Heart, User, Menu, LogOut, UserCircle, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/context/CartContext";
@@ -49,6 +50,7 @@ const FALLBACK_NAV: NavItemData[] = [
   },
   { label: 'New Arrivals', href: '/collections/new-arrivals', order: 3, published: true, createdAt: null, updatedAt: null },
   { label: 'Sale', href: '/collections/sale', order: 4, published: true, highlight: true, createdAt: null, updatedAt: null },
+  { label: 'Contact Us', href: '/contact', order: 5, published: true, createdAt: null, updatedAt: null },
 ];
 
 export function Header() {
@@ -66,7 +68,12 @@ export function Header() {
   );
   const { data: navData } = useCollection<NavItemData>(navQuery);
   const publishedNav = (navData ?? []).filter(n => n.published !== false);
-  const navItems = publishedNav.length > 0 ? publishedNav : FALLBACK_NAV;
+  const baseNav = publishedNav.length > 0 ? publishedNav : FALLBACK_NAV;
+  // Always ensure Contact Us is present — append if admin hasn't added it via nav editor
+  const hasContact = baseNav.some(n => n.href === '/contact');
+  const navItems = hasContact
+    ? baseNav
+    : [...baseNav, { label: 'Contact Us', href: '/contact', order: 999, published: true, createdAt: null, updatedAt: null }];
 
   const handleLogout = async () => { await signOut(auth); };
 
@@ -85,7 +92,19 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[85vw] sm:max-w-sm flex flex-col p-0 border-r-0 shadow-2xl">
                 <SheetHeader className="p-6 border-b text-left">
-                  <SheetTitle className="text-2xl font-headline font-bold text-primary tracking-tight">Browse Boutique</SheetTitle>
+                  <SheetTitle asChild>
+                    <div className="flex items-center gap-3">
+                      <Image src="/images/logo.svg" alt="Pehnava by Neha" width={44} height={44} className="h-11 w-11 object-contain" />
+                      <div className="flex flex-col leading-none gap-0.5">
+                        <span className="text-2xl font-headline font-bold text-primary tracking-tighter">PEHNAVA</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-px flex-1 bg-primary/30" />
+                          <span className="text-[10px] font-headline italic font-semibold text-primary/70 tracking-[0.15em]">by Neha</span>
+                          <div className="h-px flex-1 bg-primary/30" />
+                        </div>
+                      </div>
+                    </div>
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="flex-1 overflow-y-auto px-6 py-8 no-scrollbar">
                   <nav className="flex flex-col space-y-2">
@@ -138,6 +157,9 @@ export function Header() {
 
                     <Separator className="opacity-50 my-2" />
 
+                    <Link href="/contact" className="py-3 text-xl font-headline font-semibold text-foreground hover:text-primary block">
+                      Contact Us
+                    </Link>
                     <Link href="/wishlist" className="py-3 text-xl font-headline font-semibold text-foreground hover:text-primary flex items-center justify-between">
                       My Wishlist
                       {wishlistCount > 0 && (
@@ -163,13 +185,27 @@ export function Header() {
           </div>
 
           {/* Logo */}
-          <Link href="/" className="flex flex-col items-center group transition-transform active:scale-95 shrink-0">
-            <span className="text-2xl md:text-3xl lg:text-4xl font-headline font-bold text-primary tracking-tighter leading-none group-hover:opacity-80 transition-opacity">
-              PEHNAVA
-            </span>
-            <span className="text-[8px] md:text-[10px] lg:text-[11px] font-headline font-medium tracking-[0.4em] text-accent -mt-0.5 md:-mt-1 uppercase">
-              by Neha
-            </span>
+          <Link href="/" className="flex items-center gap-2 md:gap-3 group transition-transform active:scale-95 shrink-0">
+            <Image
+              src="/images/logo.svg"
+              alt="Pehnava by Neha"
+              width={48}
+              height={48}
+              className="h-9 w-9 md:h-12 md:w-12 object-contain group-hover:opacity-80 transition-opacity"
+              priority
+            />
+            <div className="flex flex-col leading-none gap-0.5">
+              <span className="text-xl md:text-2xl lg:text-[1.7rem] font-headline font-bold text-primary tracking-tighter group-hover:opacity-80 transition-opacity">
+                PEHNAVA
+              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="h-px flex-1 bg-primary/30" />
+                <span className="text-[10px] md:text-[11px] font-headline italic font-semibold text-primary/70 tracking-[0.15em]">
+                  by Neha
+                </span>
+                <div className="h-px flex-1 bg-primary/30" />
+              </div>
+            </div>
           </Link>
 
           {/* Desktop Nav — Radix NavigationMenu with dropdown support */}

@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useCollection, useMemoFirebase, useUser, type WithId } from '@/firebase';
 import {
   getAllOrdersQuery, getOrderItemsQuery, updateOrderStatus,
-  updateOrderTracking, verifyOrderPayment,
+  updateOrderTracking, verifyOrderPayment, decrementStockForOrder,
   type OrderData, type OrderItemData,
 } from '@/firebase/firestore/orders';
 import { getBoutiqueSettings, BoutiqueSettings } from '@/firebase/firestore/settings';
@@ -281,10 +281,63 @@ export default function OrdersAdminPage() {
     setIsUpdating(true);
     try {
       await verifyOrderPayment(db, order.userId, order.id);
-      toast({ title: 'Payment confirmed', description: `Order ${order.id} payment verified.` });
+
+      // Decrement stock for each item in the order
+      const itemsSnap = await getDocs(getOrderItemsQuery(db, order.userId, order.id));
+      const items = itemsSnap.docs.map(d => d.data() as OrderItemData);
+      const stockItems = (items.length > 0 ? items : (order.items || [])).map((i: any) => ({
+        productId: i.productId || i.id,
+        quantity: i.quantity,
+      })).filter((i: any) => i.productId);
+
+      if (stockItems.length > 0) {
+        await decrementStockForOrder(db, stockItems);
+      }
+
+      toast({ title: 'Payment confirmed', description: `Order ${order.id} payment verified and stock updated.` });
       setIsDetailOpen(false);
     } catch {
       toast({ variant: 'destructive', title: 'Verification failed' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleGenerateAWB = async (order: WithId<OrderData>) => {
+    if (!order) return;
+    setIsUpdating(true);
+    try {
+      const addr = order.addressJson ? JSON.parse(order.addressJson) : {};
+      const res = await fetch('/api/shiprocket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_order',
+          order: {
+            orderId: order.id,
+            customerName: order.name,
+            phone: order.phone,
+            email: '',
+            address: addr,
+            items: order.items || [],
+            subtotal: order.subtotal,
+            deliveryCharge: order.deliveryCharge,
+            discount: (order as any).discount || 0,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.awb) {
+        await updateOrderTracking(db, order.userId, order.id, data.courierName, data.awb);
+        toast({ title: 'AWB Generated!', description: `AWB: ${data.awb} via ${data.courierName}` });
+        setIsDetailOpen(false);
+      } else {
+        toast({ title: 'Order created in Shiprocket', description: 'AWB assignment pending. Check Shiprocket dashboard.' });
+      }
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'AWB Generation Failed', description: err.message });
     } finally {
       setIsUpdating(false);
     }
@@ -725,6 +778,15 @@ export default function OrdersAdminPage() {
                   className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold uppercase text-[10px] tracking-widest h-11"
                 >
                   Cancel Order
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={isUpdating || !!selectedOrder.trackingNumber}
+                  onClick={() => handleGenerateAWB(selectedOrder)}
+                  className="w-full rounded-xl font-bold uppercase text-[10px] tracking-widest h-11 border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Truck className="h-4 w-4 mr-2" />}
+                  {selectedOrder.trackingNumber ? `AWB: ${selectedOrder.trackingNumber}` : 'Generate AWB (Shiprocket)'}
                 </Button>
               </SheetFooter>
             </>

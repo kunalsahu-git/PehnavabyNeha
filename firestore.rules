@@ -136,6 +136,27 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    /** Returns — user creates their own, admin manages all */
+    match /returns/{returnId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow update, delete: if isAdmin();
+      allow list: if isAdmin();
+    }
+
+    /** Refund Ledger — admin only */
+    match /refunds/{refundId} {
+      allow read, write: if isAdmin();
+    }
+
+    /** Contact Messages — anyone can create, only admins can read/manage */
+    match /contact_messages/{messageId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     /** RBAC Collection */
     match /roles_admin/{adminUid} {
       allow get: if isSignedIn();

@@ -46,8 +46,10 @@ import { exportToCSV } from '@/lib/export-utils';
 import { BulkActionToolbar } from '@/components/admin/BulkActionToolbar';
 import {
   getAllProductsQuery, createProduct, updateProduct, deleteProduct,
-  formatProductDate, slugify, generateSku, SIZE_OPTIONS, type ProductData,
+  formatProductDate, slugify, generateSku, SIZE_OPTIONS, type ProductData, type ProductColor,
 } from '@/firebase/firestore/products';
+import { normalizeColor } from '@/lib/colors';
+import { ColorPicker } from '@/components/ui/color-picker';
 import { getAllCategoriesQuery, type CategoryData } from '@/firebase/firestore/categories';
 import { getAllCollectionsQuery, type CollectionData } from '@/firebase/firestore/collections';
 
@@ -56,7 +58,7 @@ type ProductFormState = {
   category: string; categorySlug: string;
   collections: string[];
   price: string; originalPrice: string; fabric: string;
-  description: string; details: string; colors: string; sizes: string[];
+  description: string; details: string; colors: ProductColor[]; sizes: string[];
   isNew: boolean; isSale: boolean; isBestseller: boolean;
   published: boolean; stock: string; images: string[];
 };
@@ -66,7 +68,7 @@ const DEFAULT_FORM: ProductFormState = {
   category: '', categorySlug: '',
   collections: [],
   price: '', originalPrice: '', fabric: '',
-  description: '', details: '', colors: '', sizes: [],
+  description: '', details: '', colors: [], sizes: [],
   isNew: false, isSale: false, isBestseller: false,
   published: false, stock: '', images: [],
 };
@@ -79,7 +81,8 @@ function productToForm(p: WithId<ProductData>): ProductFormState {
     price: p.price.toString(), originalPrice: p.originalPrice?.toString() ?? '',
     fabric: p.fabric ?? '', description: p.description ?? '',
     details: (p.details ?? []).join('\n'),
-    colors: (p.colors ?? []).join(', '),
+    // Normalize legacy string[] or new ProductColor[] — always returns ProductColor[]
+    colors: (p.colors ?? []).map(normalizeColor),
     sizes: p.sizes ?? [],
     isNew: p.isNew ?? false, isSale: p.isSale ?? false,
     isBestseller: p.isBestseller ?? false, published: p.published ?? false,
@@ -240,7 +243,7 @@ export default function ProductsAdminPage() {
         images: form.images,
         description: form.description,
         details: form.details.split('\n').map(d => d.trim()).filter(Boolean),
-        colors: form.colors.split(',').map(c => c.trim()).filter(Boolean),
+        colors: form.colors,
         sizes: form.sizes,
         fabric: form.fabric,
         isNew: form.isNew,
@@ -738,9 +741,11 @@ export default function ProductsAdminPage() {
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Stock Qty</Label>
                 <Input type="number" placeholder="Blank = unlimited" className="h-12 rounded-xl" value={form.stock} onChange={e => set('stock', e.target.value)} />
               </div>
-              <div className="space-y-2 col-span-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Colors (comma-separated)</Label>
-                <Input placeholder="Red, Gold, Ivory" className="h-12 rounded-xl" value={form.colors} onChange={e => set('colors', e.target.value)} />
+              <div className="space-y-3 col-span-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Colors {form.colors.length > 0 && <span className="text-primary">({form.colors.length} selected)</span>}
+                </Label>
+                <ColorPicker value={form.colors} onChange={v => set('colors', v)} />
               </div>
             </div>
 

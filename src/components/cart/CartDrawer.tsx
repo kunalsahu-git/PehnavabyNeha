@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { normalizeColor, colorToCSS, isLightColor } from "@/lib/colors";
+import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
   const { items, removeItem, updateQuantity, subtotal, isOpen, setIsOpen } = useCart();
@@ -41,7 +43,7 @@ export function CartDrawer() {
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-6">
                 {items.map((item) => (
-                  <div key={`${item.id}-${item.size}`} className="flex gap-4">
+                  <div key={`${item.id}-${item.size ?? ''}-${item.color ?? ''}`} className="flex gap-4">
                     <div className="relative h-24 w-18 flex-shrink-0 overflow-hidden rounded-md bg-secondary">
                       <Image
                         src={item.image}
@@ -54,9 +56,24 @@ export function CartDrawer() {
                       <div className="flex justify-between">
                         <div>
                           <h4 className="text-sm font-medium line-clamp-1">{item.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Size: {item.size} {item.color ? `| Color: ${item.color}` : ''}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            {item.size && (
+                              <span className="text-xs text-muted-foreground">Size: {item.size}</span>
+                            )}
+                            {item.color && (() => {
+                              const c = normalizeColor(item.color);
+                              return (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  {item.size && <span className="text-muted-foreground/50">·</span>}
+                                  <span
+                                    className={cn("h-3 w-3 rounded-full inline-block border", isLightColor(c.hex) ? "border-slate-300" : "border-transparent")}
+                                    style={{ background: colorToCSS(c.hex) }}
+                                  />
+                                  {c.name}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </div>
                         <p className="text-sm font-bold">₹{item.price.toLocaleString()}</p>
                       </div>
@@ -66,7 +83,7 @@ export function CartDrawer() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-none"
-                            onClick={() => updateQuantity(item.id, -1, item.size)}
+                            onClick={() => updateQuantity(item.id, -1, item.size, item.color)}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -75,7 +92,7 @@ export function CartDrawer() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 rounded-none"
-                            onClick={() => updateQuantity(item.id, 1, item.size)}
+                            onClick={() => updateQuantity(item.id, 1, item.size, item.color)}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -84,7 +101,7 @@ export function CartDrawer() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeItem(item.id, item.size)}
+                          onClick={() => removeItem(item.id, item.size, item.color)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

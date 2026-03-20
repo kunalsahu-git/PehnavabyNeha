@@ -15,8 +15,8 @@ export type CartItem = {
 type CartContextType = {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (id: string, size?: string) => void;
-  updateQuantity: (id: string, delta: number, size?: string) => void;
+  removeItem: (id: string, size?: string, color?: string) => void;
+  updateQuantity: (id: string, delta: number, size?: string, color?: string) => void;
   clearCart: () => void;
   subtotal: number;
   itemCount: number;
@@ -39,32 +39,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("pehnava_cart", JSON.stringify(items));
   }, [items]);
 
+  const isSameItem = (a: CartItem, b: CartItem) =>
+    a.id === b.id && a.size === b.size && a.color === b.color;
+
   const addItem = (newItem: CartItem) => {
     setItems((prev) => {
-      const existing = prev.find(
-        (i) => i.id === newItem.id && i.size === newItem.size
-      );
+      const existing = prev.find(i => isSameItem(i, newItem));
       if (existing) {
-        return prev.map((i) =>
-          i.id === newItem.id && i.size === newItem.size
-            ? { ...i, quantity: i.quantity + newItem.quantity }
-            : i
+        return prev.map(i =>
+          isSameItem(i, newItem) ? { ...i, quantity: i.quantity + newItem.quantity } : i
         );
       }
       return [...prev, newItem];
     });
-    // Removed toast to adhere to error-only guidelines and prevent UI blocking
     setIsOpen(true);
   };
 
-  const removeItem = (id: string, size?: string) => {
-    setItems((prev) => prev.filter((i) => !(i.id === id && i.size === size)));
+  const removeItem = (id: string, size?: string, color?: string) => {
+    setItems((prev) => prev.filter((i) => !(i.id === id && i.size === size && i.color === color)));
   };
 
-  const updateQuantity = (id: string, delta: number, size?: string) => {
+  const updateQuantity = (id: string, delta: number, size?: string, color?: string) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id && i.size === size
+        i.id === id && i.size === size && i.color === color
           ? { ...i, quantity: Math.max(1, i.quantity + delta) }
           : i
       )
