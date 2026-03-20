@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useCollection, useMemoFirebase, useUser, type WithId } from '@/firebase';
 import {
   getAllOrdersQuery, getOrderItemsQuery, updateOrderStatus,
-  updateOrderTracking, verifyOrderPayment, decrementStockForOrder,
+  updateOrderTracking, verifyOrderPayment, rejectOrderPayment, decrementStockForOrder,
   type OrderData, type OrderItemData,
 } from '@/firebase/firestore/orders';
 import { getBoutiqueSettings, BoutiqueSettings } from '@/firebase/firestore/settings';
@@ -135,6 +135,7 @@ const statusBadge = (s: OrderData['orderStatus']) =>
 const paymentBadge = (s: OrderData['paymentStatus']) =>
   s === 'CONFIRMED'             ? 'bg-green-100 text-green-700' :
   s === 'VERIFICATION_PENDING'  ? 'bg-purple-100 text-purple-700' :
+  s === 'FAILED'                ? 'bg-red-100 text-red-700' :
   s === 'REFUNDED'              ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-700';
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -152,6 +153,18 @@ export default function OrdersAdminPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [boutiqueSettings, setBoutiqueSettings] = useState<BoutiqueSettings | null>(null);
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
+
+  // Confirmation dialogs
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isConfirmPaymentOpen, setIsConfirmPaymentOpen] = useState(false);
+  const [isRejectPaymentOpen, setIsRejectPaymentOpen] = useState(false);
+
+  // Receipt lightbox
+  const [receiptLightboxUrl, setReceiptLightboxUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = React.useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
   // Fetch boutique settings for invoice branding
   React.useEffect(() => {
@@ -196,8 +209,30 @@ export default function OrdersAdminPage() {
     selectedIds, toggleSelect, toggleSelectAll, setSelectedIds
   } = useDataTable<WithId<OrderData>>({
     data: (orders ?? []).map(o => {
-      const orderStatus = (o.orderStatus || (o as any).status || 'PENDING').toUpperCase() as OrderData['orderStatus'];
-      const paymentStatus = (o.paymentStatus || (o as any).paymentStatus || 'PENDING').toUpperCase() as OrderData['paymentStatus'];
+      const rawOrder = ((o.orderStatus || (o as any).status || 'PENDING') as string).toUpperCase().trim();
+      const rawPayment = ((o.paymentStatus || 'PENDING') as string).toUpperCase().trim();
+
+      // Normalize legacy order statuses
+      const orderStatus = (
+        rawOrder === 'COMPLETE' ? 'DELIVERED' : rawOrder
+      ) as OrderData['orderStatus'];
+
+      // Normalize legacy payment statuses from old data
+      const paymentStatus = (
+        rawPayment === 'PENDING VERIFICATION' ||
+        rawPayment === 'PENDING_VERIFICATION' ||
+        rawPayment === 'PENDING RECEIPT'       ||
+        rawPayment === 'AWAITING VERIFICATION' ||
+        rawPayment === 'SUBMITTED'
+          ? 'VERIFICATION_PENDING'
+        : rawPayment === 'PAID'    ? 'CONFIRMED'
+        : rawPayment === 'FAILED'  ? 'FAILED'
+        : rawPayment === 'REFUNDED'? 'REFUNDED'
+        : rawPayment === 'CONFIRMED' ? 'CONFIRMED'
+        : rawPayment === 'VERIFICATION_PENDING' ? 'VERIFICATION_PENDING'
+        : 'PENDING'
+      ) as OrderData['paymentStatus'];
+
       return { ...o, orderStatus, paymentStatus };
     }),
     searchFields: ['id', 'name', 'phone'],
@@ -271,6 +306,20 @@ export default function OrdersAdminPage() {
       setCourierName(''); setTrackingNumber('');
     } catch {
       toast({ variant: 'destructive', title: 'Update failed' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRejectPayment = async (order: WithId<OrderData>) => {
+    if (!db) return;
+    setIsUpdating(true);
+    try {
+      await rejectOrderPayment(db, order.userId, order.id);
+      toast({ title: 'Payment rejected', description: `Order ${order.id.slice(0, 8)} marked as failed and cancelled.` });
+      setIsDetailOpen(false);
+    } catch {
+      toast({ variant: 'destructive', title: 'Rejection failed' });
     } finally {
       setIsUpdating(false);
     }
@@ -416,7 +465,7 @@ export default function OrdersAdminPage() {
                   <div className="space-y-2">
                     <Label className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Payment Status</Label>
                     <div className="flex flex-wrap gap-2">
-                       {['PENDING', 'VERIFICATION_PENDING', 'CONFIRMED', 'REFUNDED'].map(s => (
+                       {['PENDING', 'VERIFICATION_PENDING', 'CONFIRMED', 'FAILED', 'REFUNDED'].map(s => (
                         <Button 
                           key={s}
                           variant={filters.find(f => f.key === 'paymentStatus')?.value === s ? 'default' : 'outline'} 
@@ -613,6 +662,133 @@ export default function OrdersAdminPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Cancel Order Confirmation ── */}
+      <Dialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-headline uppercase tracking-wider text-red-600">Cancel Order?</DialogTitle>
+            <DialogDescription className="text-xs pt-1">
+              This will cancel order <span className="font-mono font-bold">{selectedOrder?.id?.slice(0, 8)}…</span> for <span className="font-bold">{selectedOrder?.name}</span>. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" className="rounded-xl flex-1" onClick={() => setIsCancelConfirmOpen(false)}>Keep Order</Button>
+            <Button
+              disabled={isUpdating}
+              className="rounded-xl flex-1 bg-red-600 hover:bg-red-700 font-bold uppercase text-[10px] tracking-widest"
+              onClick={async () => {
+                if (!selectedOrder) return;
+                setIsCancelConfirmOpen(false);
+                await handleUpdateStatus(selectedOrder, 'CANCELLED');
+              }}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              Yes, Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirm Payment Confirmation ── */}
+      <Dialog open={isConfirmPaymentOpen} onOpenChange={setIsConfirmPaymentOpen}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-headline uppercase tracking-wider text-green-700">Confirm Payment Received?</DialogTitle>
+            <DialogDescription className="text-xs pt-1">
+              You're confirming that ₹{selectedOrder?.total?.toLocaleString()} has been received from <span className="font-bold">{selectedOrder?.name}</span>. The order will move to <span className="font-bold">PROCESSING</span> and stock will be decremented.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" className="rounded-xl flex-1" onClick={() => setIsConfirmPaymentOpen(false)}>Go Back</Button>
+            <Button
+              disabled={isUpdating}
+              className="rounded-xl flex-1 bg-green-600 hover:bg-green-700 font-bold uppercase text-[10px] tracking-widest"
+              onClick={async () => {
+                if (!selectedOrder) return;
+                setIsConfirmPaymentOpen(false);
+                await handleVerifyPayment(selectedOrder);
+              }}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PackageCheck className="h-4 w-4 mr-2" />}
+              Yes, Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reject Payment Confirmation ── */}
+      <Dialog open={isRejectPaymentOpen} onOpenChange={setIsRejectPaymentOpen}>
+        <DialogContent className="rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-headline uppercase tracking-wider text-red-600">Reject Payment?</DialogTitle>
+            <DialogDescription className="text-xs pt-1">
+              You're marking the payment from <span className="font-bold">{selectedOrder?.name}</span> as <span className="font-bold text-red-600">FAILED</span>. The order will be <span className="font-bold">CANCELLED</span>. Only do this if the screenshot is invalid or payment was not received.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" className="rounded-xl flex-1" onClick={() => setIsRejectPaymentOpen(false)}>Go Back</Button>
+            <Button
+              disabled={isUpdating}
+              className="rounded-xl flex-1 bg-red-600 hover:bg-red-700 font-bold uppercase text-[10px] tracking-widest"
+              onClick={async () => {
+                if (!selectedOrder) return;
+                setIsRejectPaymentOpen(false);
+                await handleRejectPayment(selectedOrder);
+              }}
+            >
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              Yes, Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Receipt Lightbox with Zoom/Pan ── */}
+      <Dialog open={!!receiptLightboxUrl} onOpenChange={(open) => { if (!open) setReceiptLightboxUrl(null); }}>
+        <DialogContent className="sm:max-w-3xl max-h-[95vh] p-0 rounded-3xl overflow-hidden bg-black border-none">
+          <DialogHeader className="absolute top-0 left-0 right-0 z-10 flex flex-row items-center justify-between p-4 bg-gradient-to-b from-black/70 to-transparent">
+            <DialogTitle className="text-white text-xs font-bold uppercase tracking-widest">Payment Receipt</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setZoom(z => Math.min(z + 0.5, 4))} className="h-8 w-8 p-0 rounded-full bg-white/20 hover:bg-white/30 text-white text-lg font-bold">+</Button>
+              <span className="text-white text-xs font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
+              <Button size="sm" variant="ghost" onClick={() => setZoom(z => Math.max(z - 0.5, 0.5))} className="h-8 w-8 p-0 rounded-full bg-white/20 hover:bg-white/30 text-white text-lg font-bold">−</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="h-8 px-3 rounded-full bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold uppercase tracking-widest">Reset</Button>
+            </div>
+          </DialogHeader>
+          {receiptLightboxUrl && (
+            <div
+              className="w-full h-[90vh] overflow-hidden flex items-center justify-center select-none"
+              style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in' }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                setZoom(z => Math.min(Math.max(z + delta, 0.5), 5));
+              }}
+              onMouseDown={(e) => {
+                if (zoom <= 1) return;
+                setIsDragging(true);
+                dragStart.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging || !dragStart.current) return;
+                setPan({ x: dragStart.current.px + (e.clientX - dragStart.current.x), y: dragStart.current.py + (e.clientY - dragStart.current.y) });
+              }}
+              onMouseUp={() => { setIsDragging(false); dragStart.current = null; }}
+              onMouseLeave={() => { setIsDragging(false); dragStart.current = null; }}
+              onClick={() => { if (zoom <= 1) setZoom(2); }}
+            >
+              <div style={{ transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`, transition: isDragging ? 'none' : 'transform 0.15s ease' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptLightboxUrl} alt="Payment Receipt" className="max-w-full max-h-[85vh] object-contain rounded-xl" draggable={false} />
+              </div>
+            </div>
+          )}
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Scroll or click to zoom · Drag to pan</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <SheetContent className="sm:max-w-xl overflow-y-auto no-scrollbar">
           {selectedOrder && (
@@ -679,15 +855,32 @@ export default function OrdersAdminPage() {
                       <h4 className="text-sm font-bold text-amber-900 uppercase tracking-widest">UPI Verification Required</h4>
                       <p className="text-xs text-amber-700 mt-1">Please confirm you've received ₹{selectedOrder.total.toLocaleString()} from {selectedOrder.name}.</p>
                     </div>
-                    {(selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl) && (
-                      <div className="relative aspect-[3/4] w-full max-w-[200px] rounded-xl overflow-hidden shadow-md border-4 border-white">
-                        <Image src={selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl} alt="UPI Screenshot" fill className="object-contain bg-white" />
-                      </div>
-                    )}
-                    <Button onClick={() => handleVerifyPayment(selectedOrder)} disabled={isUpdating} className="w-full h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-amber-200 transition-all">
-                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PackageCheck className="h-4 w-4 mr-2" />}
-                      Verify Payment & Accept Order
-                    </Button>
+                    {(selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl) && (() => {
+                      const receiptUrl = selectedOrder.paymentScreenshotUrl || (selectedOrder as any).receiptUrl;
+                      return (
+                        <div className="relative w-full">
+                          <div
+                            className="relative aspect-[3/4] w-full max-w-[200px] mx-auto rounded-xl overflow-hidden shadow-md border-4 border-white cursor-zoom-in group"
+                            onClick={() => { setReceiptLightboxUrl(receiptUrl); setZoom(1); setPan({ x: 0, y: 0 }); }}
+                          >
+                            <Image src={receiptUrl} alt="UPI Screenshot" fill className="object-contain bg-white" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-bold uppercase tracking-widest bg-black/50 px-3 py-1.5 rounded-full transition-all">View Full</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex gap-3 w-full">
+                      <Button onClick={() => setIsConfirmPaymentOpen(true)} disabled={isUpdating} className="flex-1 h-12 rounded-2xl bg-green-600 hover:bg-green-700 font-bold uppercase text-[10px] tracking-[0.2em] shadow-lg shadow-green-200 transition-all">
+                        <PackageCheck className="h-4 w-4 mr-2" />
+                        Confirm Paid
+                      </Button>
+                      <Button onClick={() => setIsRejectPaymentOpen(true)} disabled={isUpdating} variant="outline" className="flex-1 h-12 rounded-2xl border-red-200 text-red-600 hover:bg-red-50 font-bold uppercase text-[10px] tracking-[0.2em] transition-all">
+                        <X className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                    </div>
                   </div>
                 )}
 
@@ -744,50 +937,60 @@ export default function OrdersAdminPage() {
                 </div>
               </div>
 
-              <SheetFooter className="sticky bottom-0 bg-white pt-4 border-t gap-2">
-                <div className="grid grid-cols-3 gap-2 w-full">
+              <SheetFooter className="sticky bottom-0 bg-white border-t pt-4 pb-2 px-6 flex flex-col gap-3">
+                {/* Fulfillment status row */}
+                <div className="w-full space-y-2">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Move Fulfillment Status</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { status: 'PROCESSING' as const, label: 'Processing', icon: Package, color: 'text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-400' },
+                      { status: 'SHIPPED' as const,    label: 'Shipped',    icon: Truck,       color: 'text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400',  onClick: () => setIsShipDialogOpen(true) },
+                      { status: 'DELIVERED' as const,  label: 'Delivered',  icon: PackageCheck, color: 'text-green-600 border-green-200 hover:bg-green-50 hover:border-green-400' },
+                    ].map(({ status, label, icon: Icon, color, onClick: customClick }) => {
+                      const isActive = selectedOrder.orderStatus === status;
+                      return (
+                        <Button
+                          key={status}
+                          variant="outline"
+                          disabled={isUpdating || isActive}
+                          onClick={customClick ?? (() => handleUpdateStatus(selectedOrder, status))}
+                          className={cn(
+                            "rounded-xl h-14 flex-col gap-1 font-bold uppercase text-[9px] tracking-widest border-2 transition-all",
+                            isActive
+                              ? "bg-slate-900 text-white border-slate-900 cursor-default"
+                              : color
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {label}
+                          {isActive && <span className="text-[7px] tracking-widest opacity-70">CURRENT</span>}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* AWB + Cancel row */}
+                <div className="grid grid-cols-2 gap-2 w-full">
                   <Button
                     variant="outline"
-                    disabled={isUpdating || selectedOrder.orderStatus === 'PROCESSING'}
-                    onClick={() => handleUpdateStatus(selectedOrder, 'PROCESSING')}
-                    className="rounded-xl font-bold uppercase text-[8px] tracking-widest gap-1.5 flex-col h-14"
+                    disabled={isUpdating || !!selectedOrder.trackingNumber}
+                    onClick={() => handleGenerateAWB(selectedOrder)}
+                    className="rounded-xl h-11 font-bold uppercase text-[9px] tracking-widest border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 gap-2 transition-all"
                   >
-                    <Package className="h-4 w-4" /> Processing
+                    {isUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                    {selectedOrder.trackingNumber ? `AWB: ${selectedOrder.trackingNumber.slice(0, 10)}` : 'Gen AWB'}
                   </Button>
                   <Button
                     variant="outline"
-                    disabled={isUpdating || selectedOrder.orderStatus === 'SHIPPED'}
-                    onClick={() => { setIsShipDialogOpen(true); }}
-                    className="rounded-xl font-bold uppercase text-[8px] tracking-widest gap-1.5 flex-col h-14 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    disabled={isUpdating || selectedOrder.orderStatus === 'CANCELLED'}
+                    onClick={() => setIsCancelConfirmOpen(true)}
+                    className="rounded-xl h-11 font-bold uppercase text-[9px] tracking-widest border-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-400 gap-2 transition-all"
                   >
-                    <Truck className="h-4 w-4" /> Shipped
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={isUpdating || selectedOrder.orderStatus === 'DELIVERED'}
-                    onClick={() => handleUpdateStatus(selectedOrder, 'DELIVERED')}
-                    className="rounded-xl font-bold uppercase text-[8px] tracking-widest gap-1.5 flex-col h-14 text-green-600 border-green-200 hover:bg-green-50"
-                  >
-                    <PackageCheck className="h-4 w-4" /> Delivered
+                    <X className="h-3.5 w-3.5" />
+                    Cancel Order
                   </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  disabled={isUpdating || selectedOrder.orderStatus === 'CANCELLED'}
-                  onClick={() => handleUpdateStatus(selectedOrder, 'CANCELLED')}
-                  className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold uppercase text-[10px] tracking-widest h-11"
-                >
-                  Cancel Order
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={isUpdating || !!selectedOrder.trackingNumber}
-                  onClick={() => handleGenerateAWB(selectedOrder)}
-                  className="w-full rounded-xl font-bold uppercase text-[10px] tracking-widest h-11 border-blue-200 text-blue-600 hover:bg-blue-50"
-                >
-                  {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Truck className="h-4 w-4 mr-2" />}
-                  {selectedOrder.trackingNumber ? `AWB: ${selectedOrder.trackingNumber}` : 'Generate AWB (Shiprocket)'}
-                </Button>
               </SheetFooter>
             </>
           )}

@@ -19,7 +19,7 @@ export type OrderData = {
   subtotal: number;
   deliveryCharge: number;
   total: number;
-  paymentStatus: 'PENDING' | 'CONFIRMED' | 'VERIFICATION_PENDING' | 'REFUNDED';
+  paymentStatus: 'PENDING' | 'VERIFICATION_PENDING' | 'CONFIRMED' | 'FAILED' | 'REFUNDED';
   orderStatus: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
   paymentScreenshotUrl?: string;
   courierName?: string;
@@ -101,15 +101,30 @@ export async function decrementStockForOrder(
   );
 }
 
-/** Verify payment */
+/** Verify payment — confirms payment and moves order to PROCESSING */
 export async function verifyOrderPayment(
-  db: Firestore, 
-  userId: string, 
+  db: Firestore,
+  userId: string,
   orderId: string
 ) {
   const orderRef = doc(db, 'users', userId, 'orders', orderId);
   return updateDoc(orderRef, {
     paymentStatus: 'CONFIRMED',
+    orderStatus: 'PROCESSING',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Reject payment — marks payment as failed and cancels the order */
+export async function rejectOrderPayment(
+  db: Firestore,
+  userId: string,
+  orderId: string
+) {
+  const orderRef = doc(db, 'users', userId, 'orders', orderId);
+  return updateDoc(orderRef, {
+    paymentStatus: 'FAILED',
+    orderStatus: 'CANCELLED',
     updatedAt: serverTimestamp(),
   });
 }

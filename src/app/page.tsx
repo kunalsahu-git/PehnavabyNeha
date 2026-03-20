@@ -320,12 +320,12 @@ export default function Home() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={isCurrent ? { opacity: 1, y: 0 } : {}}
                         transition={{ delay: 0.8 }}
-                        className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4"
+                        className="pt-6 flex flex-row items-center justify-center gap-3"
                       >
-                        <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 h-12 md:h-14 px-10 rounded-full font-bold w-full sm:w-auto shadow-2xl transition-all hover:scale-105 active:scale-95">
+                        <Button asChild className="bg-white text-primary hover:bg-white/90 h-10 md:h-14 px-6 md:px-10 text-xs md:text-sm rounded-full font-bold shadow-2xl transition-all hover:scale-105 active:scale-95">
                           <Link href={slideHref}>{ctaLabel}</Link>
                         </Button>
-                        <Button size="lg" variant="outline" asChild className="border-2 border-white/30 text-white bg-white/5 hover:bg-white hover:text-primary h-12 md:h-14 px-10 rounded-full w-full sm:w-auto backdrop-blur-md shadow-xl font-bold transition-all hover:border-white">
+                        <Button variant="outline" asChild className="border-2 border-white/30 text-white bg-white/5 hover:bg-white hover:text-primary h-10 md:h-14 px-6 md:px-10 text-xs md:text-sm rounded-full backdrop-blur-md shadow-xl font-bold transition-all hover:border-white">
                           <Link href="/collections/new-arrivals">View Lookbook</Link>
                         </Button>
                       </motion.div>
