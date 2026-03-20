@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   MapPin,
@@ -35,6 +35,14 @@ const INQUIRY_TYPES = [
 ];
 
 export default function ContactPage() {
+  return (
+    <Suspense>
+      <ContactPageInner />
+    </Suspense>
+  );
+}
+
+function ContactPageInner() {
   const db = useFirestore();
   const { toast } = useToast();
   const searchParams = useSearchParams();
