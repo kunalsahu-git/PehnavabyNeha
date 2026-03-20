@@ -9,6 +9,18 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 export const metadata: Metadata = {
   title: 'Pehnava by Neha | Wear Your Story',
   description: 'Curated luxury women\'s fashion boutique specializing in South Asian heritage ethnic wear and fusion clothing.',
+  icons: {
+    icon: [
+      { url: '/images/favicon/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/images/favicon/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/images/favicon/favicon.ico', sizes: 'any' },
+    ],
+    apple: { url: '/images/favicon/apple-touch-icon.png', sizes: '180x180' },
+    other: [
+      { rel: 'android-chrome', url: '/images/favicon/android-chrome-192x192.png', sizes: '192x192' },
+      { rel: 'android-chrome', url: '/images/favicon/android-chrome-512x512.png', sizes: '512x512' },
+    ],
+  },
 };
 
 export default function RootLayout({
